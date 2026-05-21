@@ -48,7 +48,7 @@ export async function GET() {
     });
 
     Object.entries(byActivity).forEach(([actId, dates]) => {
-      const sorted = [...new Set(dates)].sort().reverse();
+      const sorted = Array.from(new Set(dates)).sort().reverse();
       let streak = 0;
       const now = new Date();
       for (let i = 0; i < sorted.length; i++) {
