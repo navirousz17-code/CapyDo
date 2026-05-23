@@ -28,7 +28,7 @@ export const PET_STAGES: PetStage[] = [
     name: 'Sleeping Egg',
     minXp: 0,
     maxXp: 49,
-    image: '/pet_egg', // ✅ updated
+    image: '/pet_egg.png', // ✅ updated
     vibe: '😴 Sleeping...',
     messages: [
       'Zzz... keep going...',
