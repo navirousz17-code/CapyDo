@@ -1,5 +1,6 @@
 'use client';
 // components/StreakPet.tsx
+// REPLACE your existing file with this — all hydration fixes applied
 
 import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
@@ -7,19 +8,23 @@ import { usePetStore, PET_STAGES } from '@/hooks/usePetStore';
 import { Zap, ChevronDown, ChevronUp } from 'lucide-react';
 
 // ─────────────────────────────────────────
-// HERO CARD — embed this in dashboard/page.tsx
-// import { StreakPetCard } from '@/components/StreakPet'
-// <StreakPetCard />
+// HERO CARD
 // ─────────────────────────────────────────
 export function StreakPetCard() {
-  const { xp, getCurrentStage, getXpProgress } = usePetStore();
-  const stage = getCurrentStage();
-  const progress = getXpProgress();
-  const nextStage = PET_STAGES.find((s) => s.minXp > stage.maxXp);
-  const stageIndex = PET_STAGES.findIndex((s) => s.stage === stage.stage);
-
+  // ✅ ALL hooks at the top — before ANY return
+  const [mounted, setMounted] = useState(false);
   const [pulse, setPulse] = useState(false);
+  const [message, setMessage] = useState('');
+  const { xp, getCurrentStage, getXpProgress } = usePetStore();
   const prevXp = useRef(xp);
+
+  useEffect(() => { setMounted(true); }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const stage = getCurrentStage();
+    setMessage(stage.messages[Math.floor(Math.random() * stage.messages.length)]);
+  }, [mounted, xp]);
 
   useEffect(() => {
     if (xp !== prevXp.current) {
@@ -29,6 +34,14 @@ export function StreakPetCard() {
       return () => clearTimeout(t);
     }
   }, [xp]);
+
+  // ✅ Early return AFTER all hooks
+  if (!mounted) return null;
+
+  const stage = getCurrentStage();
+  const progress = getXpProgress();
+  const nextStage = PET_STAGES.find((s) => s.minXp > stage.maxXp);
+  const stageIndex = PET_STAGES.findIndex((s) => s.stage === stage.stage);
 
   const auraColor = {
     egg:       'rgba(255,230,150,0.2)',
@@ -55,7 +68,7 @@ export function StreakPetCard() {
     : 'linear-gradient(90deg, var(--accent), var(--success))';
 
   const xpChips = [
-    { label: 'Task', xp: '+10', icon: '✅' },
+    { label: 'Task',  xp: '+10', icon: '✅' },
     { label: 'Habit', xp: '+15', icon: '🔄' },
     { label: 'Quest', xp: '+50', icon: '🎯' },
   ];
@@ -104,42 +117,30 @@ export function StreakPetCard() {
           boxShadow: `0 8px 48px ${auraColor}, 0 2px 8px rgba(0,0,0,0.05)`,
         }}
       >
-        {/* Aura wash */}
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{ background: `radial-gradient(ellipse at 65% 50%, ${auraColor} 0%, transparent 65%)` }}
-        />
+        <div className="absolute inset-0 pointer-events-none"
+          style={{ background: `radial-gradient(ellipse at 65% 50%, ${auraColor} 0%, transparent 65%)` }} />
 
         <div className="relative flex flex-col sm:flex-row items-center gap-6 p-6 md:p-8">
 
-          {/* ── Pet Image ── */}
+          {/* Pet Image */}
           <div className="relative flex-shrink-0 flex items-center justify-center" style={{ width: 160, height: 160 }}>
-            {/* Rotating aura ring for teen/adult */}
             {(stage.stage === 'teen' || stage.stage === 'adult') && (
-              <div
-                className="absolute inset-0 rounded-full pointer-events-none"
+              <div className="absolute inset-0 rounded-full pointer-events-none"
                 style={{
                   background: `conic-gradient(${glowColor}, transparent 60%, ${glowColor})`,
                   animation: 'cardAuraRotate 3s linear infinite',
-                  filter: 'blur(10px)',
-                  opacity: 0.75,
-                }}
-              />
+                  filter: 'blur(10px)', opacity: 0.75,
+                }} />
             )}
-            {/* Soft glow */}
-            <div
-              className="absolute inset-6 rounded-full pointer-events-none"
+            <div className="absolute inset-6 rounded-full pointer-events-none"
               style={{
                 background: `radial-gradient(circle, ${glowColor} 0%, transparent 75%)`,
                 animation: 'cardStageGlow 2.5s ease-in-out infinite',
-              }}
-            />
-            {/* Pet */}
+              }} />
             <div
               className={pulse ? 'card-hero-pulse' : 'card-hero-float'}
               style={{
-                position: 'relative',
-                zIndex: 2,
+                position: 'relative', zIndex: 2,
                 filter: stage.stage === 'adult'
                   ? 'drop-shadow(0 0 22px rgba(255,160,0,0.85))'
                   : stage.stage === 'teen'
@@ -151,10 +152,8 @@ export function StreakPetCard() {
             </div>
           </div>
 
-          {/* ── Info panel ── */}
+          {/* Info panel */}
           <div className="flex-1 w-full flex flex-col gap-4">
-
-            {/* Name + vibe badge */}
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span
@@ -163,16 +162,14 @@ export function StreakPetCard() {
                 >
                   {stage.name}
                 </span>
-                <span
-                  className="text-xs font-bold px-2.5 py-1 rounded-full"
-                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-                >
+                <span className="text-xs font-bold px-2.5 py-1 rounded-full"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
                   {stage.vibe}
                 </span>
               </div>
-              <p className="text-sm mt-1 italic" style={{ color: 'var(--text-muted)' }}>
-                "{stage.messages[Math.floor(Math.random() * stage.messages.length)]}"
-              </p>
+              {message && (
+                <p className="text-sm mt-1 italic" style={{ color: 'var(--text-muted)' }}>"{message}"</p>
+              )}
             </div>
 
             {/* XP row */}
@@ -189,72 +186,59 @@ export function StreakPetCard() {
                   : <span className="text-xs font-black" style={{ color: '#f59e0b' }}>🔥 MAX LEVEL</span>
                 }
               </div>
-
-              {/* Bar */}
               <div className="w-full h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                <div
-                  className="h-full rounded-full transition-all duration-700"
+                <div className="h-full rounded-full transition-all duration-700"
                   style={{
-                    width: `${progress.percent}%`,
-                    background: barColor,
+                    width: `${progress.percent}%`, background: barColor,
                     boxShadow: stage.stage === 'adult' ? '0 0 10px rgba(255,180,0,0.7)' : stage.stage === 'teen' ? '0 0 10px rgba(168,85,247,0.6)' : 'none',
-                  }}
-                />
+                  }} />
               </div>
             </div>
 
-            {/* Stage progress dots */}
+            {/* Stage dots */}
             <div className="flex items-center gap-1.5">
               {PET_STAGES.map((s, i) => (
-                <div
-                  key={s.stage}
-                  className="relative flex-1 flex flex-col items-center gap-1"
-                  title={s.name}
-                >
-                  <div
-                    className="w-full h-1.5 rounded-full transition-all duration-500"
+                <div key={s.stage} className="relative flex-1 flex flex-col items-center gap-1" title={s.name}>
+                  <div className="w-full h-1.5 rounded-full transition-all duration-500"
                     style={{
                       backgroundColor: i <= stageIndex
                         ? (stage.stage === 'adult' ? '#f59e0b' : stage.stage === 'teen' ? '#a855f7' : 'var(--accent)')
                         : 'var(--bg-secondary)',
                       opacity: i === stageIndex ? 1 : i < stageIndex ? 0.65 : 0.25,
-                    }}
-                  />
+                    }} />
                   {i === stageIndex && (
-                    <div
-                      className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2"
+                    <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 rounded-full border-2"
                       style={{
                         backgroundColor: stage.stage === 'adult' ? '#f59e0b' : stage.stage === 'teen' ? '#a855f7' : 'var(--accent)',
                         borderColor: 'var(--bg-card)',
                         boxShadow: `0 0 8px ${glowColor}`,
-                      }}
-                    />
+                      }} />
                   )}
                 </div>
               ))}
             </div>
             <div className="flex justify-between -mt-1 px-0.5">
               {PET_STAGES.map((s) => (
-                <span
-                  key={s.stage}
-                  className="flex-1 text-center text-[9px] font-bold truncate"
-                  style={{ color: s.stage === stage.stage ? 'var(--text-primary)' : 'var(--text-muted)', opacity: s.stage === stage.stage ? 1 : 0.45 }}
-                >
-                  {s.stage === 'egg' ? '🥚' : s.stage === 'hatchling' ? '👀' : s.stage === 'baby' ? '😄' : s.stage === 'child' ? '😤' : s.stage === 'teen' ? '😈' : '🔥'}
+                <span key={s.stage} className="flex-1 text-center text-[9px] font-bold truncate"
+                  style={{ color: s.stage === stage.stage ? 'var(--text-primary)' : 'var(--text-muted)', opacity: s.stage === stage.stage ? 1 : 0.45 }}>
+                      <Image
+  src={`/stage_${s.stage}.png`}
+  alt={s.name}
+  width={20}
+  height={20}
+  className="object-contain rounded-full"
+  style={{ opacity: s.stage === stage.stage ? 1 : 0.4 }}
+/>
                 </span>
               ))}
             </div>
 
-            {/* XP earn chips */}
+            {/* XP chips */}
             <div className="flex gap-2 flex-wrap">
               {xpChips.map((c) => (
-                <div
-                  key={c.label}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
-                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
-                >
-                  <span>{c.icon}</span>
-                  <span>{c.label}</span>
+                <div key={c.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                  <span>{c.icon}</span><span>{c.label}</span>
                   <span style={{ color: 'var(--accent)' }}>{c.xp} XP</span>
                 </div>
               ))}
@@ -267,28 +251,24 @@ export function StreakPetCard() {
 }
 
 // ─────────────────────────────────────────
-// FLOATING CORNER WIDGET — lives in DashboardShell
+// FLOATING CORNER WIDGET
 // ─────────────────────────────────────────
 export default function StreakPet() {
-  const {
-    xp,
-    currentReaction,
-    showEvolutionBanner,
-    pendingEvolution,
-    getCurrentStage,
-    getXpProgress,
-    dismissEvolutionBanner,
-  } = usePetStore();
-
-  const stage = getCurrentStage();
-  const progress = getXpProgress();
-  const nextStage = PET_STAGES.find((s) => s.minXp > stage.maxXp);
-
+  // ✅ ALL hooks at top before any return
+  const [mounted, setMounted] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [bouncing, setBouncing] = useState(false);
   const [evolving, setEvolving] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+
+  const {
+    xp, currentReaction, showEvolutionBanner, pendingEvolution,
+    getCurrentStage, getXpProgress, dismissEvolutionBanner,
+  } = usePetStore();
+
   const prevXp = useRef(xp);
+
+  useEffect(() => { setMounted(true); }, []);
 
   useEffect(() => {
     if (xp !== prevXp.current) {
@@ -307,6 +287,13 @@ export default function StreakPet() {
     }
   }, [showEvolutionBanner]);
 
+  // ✅ Early return AFTER all hooks
+  if (!mounted) return null;
+
+  const stage = getCurrentStage();
+  const progress = getXpProgress();
+  const nextStage = PET_STAGES.find((s) => s.minXp > stage.maxXp);
+
   const barColor = stage.stage === 'adult'
     ? 'linear-gradient(90deg,#f59e0b,#fbbf24)'
     : stage.stage === 'teen'
@@ -315,78 +302,57 @@ export default function StreakPet() {
 
   return (
     <>
-      {/* ── Evolution Banner ── */}
+      {/* Evolution Banner */}
       {showEvolutionBanner && pendingEvolution && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center px-4"
-          style={{ backgroundColor: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(8px)', animation: 'floatFadeInBg 0.3s ease forwards' }}
-        >
-          <div
-            className="relative flex flex-col items-center gap-5 px-10 py-10 rounded-3xl"
+        <div className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+          style={{ backgroundColor: 'rgba(0,0,0,0.78)', backdropFilter: 'blur(8px)', animation: 'floatFadeInBg 0.3s ease forwards' }}>
+          <div className="relative flex flex-col items-center gap-5 px-10 py-10 rounded-3xl"
             style={{
               background: 'linear-gradient(160deg,#0d0520,#1e0a3c 50%,#0d0520)',
               border: '1.5px solid rgba(180,120,255,0.4)',
               boxShadow: '0 0 100px rgba(150,80,255,0.5), 0 0 200px rgba(255,160,0,0.2)',
               animation: 'floatEvoPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards',
               maxWidth: 340, width: '100%',
-            }}
-          >
-            {/* Sparkles */}
+            }}>
             {[...Array(10)].map((_, i) => (
               <div key={i} className="absolute w-1 h-1 rounded-full pointer-events-none"
                 style={{
                   backgroundColor: i % 2 === 0 ? '#fbbf24' : '#a78bfa',
-                  top: `${10 + Math.random() * 80}%`,
-                  left: `${5 + Math.random() * 90}%`,
-                  animation: `floatStageGlow ${1 + Math.random()}s ease-in-out infinite`,
+                  top: `${10 + (i * 8) % 80}%`,
+                  left: `${5 + (i * 9) % 90}%`,
+                  animation: `floatStageGlow ${1 + (i % 3) * 0.3}s ease-in-out infinite`,
                   opacity: 0.8,
-                }}
-              />
+                }} />
             ))}
-
             <div className="text-[11px] font-black tracking-[0.3em] uppercase" style={{ color: '#a78bfa' }}>✦ Evolution Unlocked ✦</div>
-
             <div style={{
               filter: evolving ? 'drop-shadow(0 0 30px rgba(255,180,0,1))' : 'drop-shadow(0 0 15px rgba(255,140,0,0.7))',
               animation: 'cardHeroFloat 2s ease-in-out infinite',
             }}>
               <Image src={pendingEvolution.image} alt={pendingEvolution.name} width={156} height={156} className="object-contain" />
             </div>
-
             <div className="text-center">
-              <div className="text-3xl font-black card-shimmer-name" style={{ fontFamily: "'Baloo 2', cursive" }}>
-                {pendingEvolution.name}
-              </div>
+              <div className="text-3xl font-black card-shimmer-name" style={{ fontFamily: "'Baloo 2', cursive" }}>{pendingEvolution.name}</div>
               <div className="text-sm mt-1" style={{ color: '#c4b5fd' }}>{pendingEvolution.vibe}</div>
             </div>
-
-            <button
-              onClick={dismissEvolutionBanner}
+            <button onClick={dismissEvolutionBanner}
               className="px-8 py-3 rounded-2xl text-sm font-black tracking-wide transition-all hover:scale-105 active:scale-95"
-              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', boxShadow: '0 4px 20px rgba(124,58,237,0.5)' }}
-            >
+              style={{ background: 'linear-gradient(135deg,#7c3aed,#a855f7)', color: 'white', boxShadow: '0 4px 20px rgba(124,58,237,0.5)' }}>
               AMAZING!! 🔥
             </button>
           </div>
         </div>
       )}
 
-      {/* ── Floating Corner ── */}
+      {/* Floating Corner */}
       <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-2 select-none">
-
-        {/* Speech bubble */}
         {currentReaction && !collapsed && (
-          <div
-            className="relative px-3 py-2 rounded-2xl rounded-br-none text-sm font-semibold shadow-lg"
+          <div className="relative px-3 py-2 rounded-2xl rounded-br-none text-sm font-semibold shadow-lg"
             style={{
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-primary)',
-              border: '1.5px solid var(--border-strong)',
-              maxWidth: 190,
-              animation: 'floatBubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
-              lineHeight: 1.4,
-            }}
-          >
+              backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)',
+              border: '1.5px solid var(--border-strong)', maxWidth: 190,
+              animation: 'floatBubblePop 0.3s cubic-bezier(0.34,1.56,0.64,1)', lineHeight: 1.4,
+            }}>
             <span className="mr-1">{currentReaction.emoji}</span>
             {currentReaction.message}
             <span className="absolute -bottom-[9px] right-4 w-0 h-0"
@@ -396,7 +362,6 @@ export default function StreakPet() {
           </div>
         )}
 
-        {/* Mini XP card */}
         {!collapsed && (
           <div className="w-[152px] rounded-xl px-3 py-2" style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border)' }}>
             <div className="flex justify-between mb-1">
@@ -415,7 +380,6 @@ export default function StreakPet() {
           </div>
         )}
 
-        {/* Pet button */}
         <div className="relative">
           <button
             onClick={() => setCollapsed(c => !c)}
@@ -429,73 +393,32 @@ export default function StreakPet() {
                 : stage.stage === 'teen'
                 ? 'drop-shadow(0 0 10px rgba(140,60,255,0.75))'
                 : 'drop-shadow(0 4px 12px rgba(0,0,0,0.22))',
-            }}
-          >
+            }}>
             <Image src={stage.image} alt={stage.name} width={collapsed ? 58 : 74} height={collapsed ? 58 : 74} className="object-contain transition-all duration-300" />
-            <span
-              className="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center shadow"
-              style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border)' }}
-            >
-              {collapsed
-                ? <ChevronUp size={11} style={{ color: 'var(--text-muted)' }} />
-                : <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />
-              }
+            <span className="absolute -top-1 -left-1 w-5 h-5 rounded-full flex items-center justify-center shadow"
+              style={{ backgroundColor: 'var(--bg-card)', border: '1.5px solid var(--border)' }}>
+              {collapsed ? <ChevronUp size={11} style={{ color: 'var(--text-muted)' }} /> : <ChevronDown size={11} style={{ color: 'var(--text-muted)' }} />}
             </span>
           </button>
           {showTooltip && collapsed && (
-            <div
-              className="absolute bottom-full right-0 mb-2 px-2 py-1 rounded-lg text-xs font-semibold whitespace-nowrap pointer-events-none"
-              style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}
-            >
+            <div className="absolute bottom-full right-0 mb-2 px-2 py-1 rounded-lg text-xs font-semibold whitespace-nowrap pointer-events-none"
+              style={{ backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border)', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}>
               {stage.name} • {xp} XP
             </div>
           )}
         </div>
       </div>
 
-      {/* Global keyframes */}
       <style jsx global>{`
-        @keyframes cardHeroFloat {
-          0%,100% { transform: translateY(0); }
-          50%      { transform: translateY(-8px); }
-        }
-        @keyframes cardHeroPulse {
-          0%   { transform: scale(1); }
-          35%  { transform: scale(1.2) translateY(-8px); }
-          65%  { transform: scale(0.92); }
-          100% { transform: scale(1); }
-        }
-        @keyframes cardShimmer {
-          0%   { background-position: -200% center; }
-          100% { background-position: 200% center; }
-        }
-        @keyframes cardStageGlow {
-          0%,100% { opacity: 0.55; }
-          50%      { opacity: 1; }
-        }
-        @keyframes floatFadeInBg {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes floatEvoPop {
-          0%   { transform: scale(0.3) rotate(-6deg); opacity: 0; }
-          100% { transform: scale(1) rotate(0deg); opacity: 1; }
-        }
-        @keyframes floatBubblePop {
-          0%   { transform: scale(0.5) translateY(10px); opacity: 0; }
-          100% { transform: scale(1) translateY(0); opacity: 1; }
-        }
-        @keyframes floatStageGlow {
-          0%,100% { opacity: 0.4; }
-          50%      { opacity: 1; }
-        }
-        .card-shimmer-name {
-          background: linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24,#d97706);
-          background-size: 200% auto;
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          animation: cardShimmer 2s linear infinite;
-        }
+        @keyframes cardHeroFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        @keyframes cardHeroPulse { 0% { transform: scale(1); } 35% { transform: scale(1.2) translateY(-8px); } 65% { transform: scale(0.92); } 100% { transform: scale(1); } }
+        @keyframes cardShimmer { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        @keyframes cardStageGlow { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+        @keyframes floatFadeInBg { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes floatEvoPop { 0% { transform: scale(0.3) rotate(-6deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        @keyframes floatBubblePop { 0% { transform: scale(0.5) translateY(10px); opacity: 0; } 100% { transform: scale(1) translateY(0); opacity: 1; } }
+        @keyframes floatStageGlow { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+        .card-shimmer-name { background: linear-gradient(90deg,#fbbf24,#f59e0b,#fbbf24,#d97706); background-size: 200% auto; -webkit-background-clip: text; -webkit-text-fill-color: transparent; animation: cardShimmer 2s linear infinite; }
       `}</style>
     </>
   );

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
   LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target
+  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -18,6 +18,7 @@ import { usePetStore } from '@/hooks/usePetStore';
 import MascotReaction from '@/components/MascotReaction';
 import BadgeUnlock from '@/components/BadgeUnlock';
 import StreakPet from '@/components/StreakPet';
+import VoiceInput from '@/components/VoiceInput';
 
 interface Props {
   user: User;
@@ -36,6 +37,8 @@ const NAV_ITEMS = [
   { href: '/dashboard/pomodoro',   label: 'Pomodoro',         icon: Timer },
   { href: '/dashboard/challenge',  label: 'Daily Quest',      icon: Target },
   { href: '/dashboard/recurring',  label: 'Recurring',        icon: Repeat },
+  { href: '/dashboard/tracker', label: 'Tracker', icon: Hourglass },
+  { href: '/dashboard/social', label: 'Social', icon: Users },
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
@@ -259,6 +262,9 @@ export default function DashboardShell({ user, children }: Props) {
 
       {/* Streak Pet 🐣 */}
       <StreakPet />
+      
+      <VoiceInput />
+
     </div>
   );
 }

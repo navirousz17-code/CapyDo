@@ -1,6 +1,5 @@
 'use client';
 // hooks/usePetStore.ts
-// Place this file at: hooks/usePetStore.ts
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
@@ -29,7 +28,7 @@ export const PET_STAGES: PetStage[] = [
     name: 'Sleeping Egg',
     minXp: 0,
     maxXp: 49,
-    image: '/pet_egg.png',
+    image: '/pet_egg', // ✅ updated
     vibe: '😴 Sleeping...',
     messages: [
       'Zzz... keep going...',
@@ -43,12 +42,12 @@ export const PET_STAGES: PetStage[] = [
     name: 'Hatchling Kalbo',
     minXp: 50,
     maxXp: 149,
-    image: '/pet_hatchling.png',
+    image: '/pet_hatchling.png', // ✅ updated
     vibe: '👀 Just hatched!',
     messages: [
       'W-what is this place??',
       'Is that a task? INTERESTING.',
-      'I just hatched and you\'re already working? Respect.',
+      "I just hatched and you're already working? Respect.",
       'Who are you? Complete more tasks!',
     ],
   },
@@ -57,13 +56,13 @@ export const PET_STAGES: PetStage[] = [
     name: 'Baby Kalbo',
     minXp: 150,
     maxXp: 299,
-    image: '/pet_baby.png',
+    image: '/pet_baby.png', // ✅ updated
     vibe: '😄 Happy & clapping!',
     messages: [
       'YAAAAY you did it!!',
       'Clap clap clap!! Go go go!!',
       'I believe in you bestie!!',
-      'You\'re my favorite human!!',
+      "You're my favorite human!!",
     ],
   },
   {
@@ -71,13 +70,13 @@ export const PET_STAGES: PetStage[] = [
     name: 'Feisty Kalbo',
     minXp: 300,
     maxXp: 499,
-    image: '/pet_child.png',
+    image: '/pet_child.png', // ✅ updated
     vibe: '😤 Determined!',
     messages: [
-      'LET\'S GOOO!! Don\'t stop now!!',
-      'I\'m getting stronger because of YOU.',
+      "LET'S GOOO!! Don't stop now!!",
+      "I'm getting stronger because of YOU.",
       'More tasks. MORE. I need it.',
-      'You think that\'s enough?! DO MORE.',
+      "You think that's enough?! DO MORE.",
     ],
   },
   {
@@ -85,7 +84,7 @@ export const PET_STAGES: PetStage[] = [
     name: 'Dark Kalbo',
     minXp: 500,
     maxXp: 749,
-    image: '/pet_teen.png',
+    image: '/pet_teen.png', // ✅ updated
     vibe: '😈 Dark aura activated',
     messages: [
       '*says nothing, just stares*',
@@ -100,7 +99,7 @@ export const PET_STAGES: PetStage[] = [
     name: 'LEGENDARY Kalbo',
     minXp: 750,
     maxXp: Infinity,
-    image: '/pet_adult.png',
+    image: '/pet_adult.png', // ✅ updated
     vibe: '🔥 LEGENDARY FORM',
     messages: [
       'I AM INEVITABLE.',
@@ -134,17 +133,14 @@ interface PetStore {
   showEvolutionBanner: boolean;
   pendingEvolution: PetStage | null;
 
-  // Getters
   getCurrentStage: () => PetStage;
   getXpProgress: () => { needed: number; current: number; percent: number };
 
-  // XP Actions
   addXp: (amount: number, type: PetReaction['type']) => void;
   onTaskComplete: () => void;
   onHabitComplete: () => void;
   onChallengeComplete: () => void;
 
-  // UI
   clearReaction: () => void;
   dismissEvolutionBanner: () => void;
 }
@@ -159,7 +155,6 @@ export const usePetStore = create<PetStore>()(
       pendingEvolution: null,
 
       getCurrentStage: () => getStageForXp(get().xp),
-
       getXpProgress: () => getXpToNextStage(get().xp),
 
       addXp: (amount, type) => {
@@ -170,7 +165,6 @@ export const usePetStore = create<PetStore>()(
 
         const evolved = newStage.stage !== oldStage.stage && newStage.stage !== lastEvolutionStage;
 
-        // Pick a random reaction message from current stage
         const messages =
           type === 'evolution'
             ? [`I EVOLVED INTO ${newStage.name.toUpperCase()}!!`, '🔥 POWER RISING 🔥']
@@ -193,7 +187,6 @@ export const usePetStore = create<PetStore>()(
           }),
         });
 
-        // Auto-clear reaction after 3s
         setTimeout(() => {
           set((s) => (s.currentReaction === reaction ? { currentReaction: null } : {}));
         }, 3000);
@@ -204,9 +197,7 @@ export const usePetStore = create<PetStore>()(
       onChallengeComplete: () => get().addXp(50, 'challenge'),
 
       clearReaction: () => set({ currentReaction: null }),
-
-      dismissEvolutionBanner: () =>
-        set({ showEvolutionBanner: false, pendingEvolution: null }),
+      dismissEvolutionBanner: () => set({ showEvolutionBanner: false, pendingEvolution: null }),
     }),
     {
       name: 'todei-pet-store',
