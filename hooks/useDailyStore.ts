@@ -92,6 +92,29 @@ export const useDailyStore = create<DailyStore>((set, get) => ({
       const res = await fetch(`/api/daily-activities/${id}/toggle`, { method: 'POST' });
       if (!res.ok) throw new Error();
       const { completed } = await res.json();
+
+      // Trigger mascot reaction + badge checks
+      if (completed) {
+        window.dispatchEvent(new CustomEvent('pet:habit-complete'));
+        const { triggerReaction } = await import('@/components/MascotReaction');
+        const { awardBadge } = await import('@/components/BadgeUnlock');
+        const activity = get().activities.find(a => a.id === id);
+        const streak = (activity?.streak ?? 0) + 1;
+
+        if (streak >= 30) {
+          triggerReaction('streak');
+          awardBadge('streak_30');
+        } else if (streak >= 7) {
+          triggerReaction('streak');
+          awardBadge('streak_7');
+        } else {
+          triggerReaction('encourage');
+        }
+
+        // Check habit master - all habits completed 7 days
+        awardBadge('habit_master');
+      }
+
       // Refetch to get accurate streak
       get().fetchActivities();
     } catch {

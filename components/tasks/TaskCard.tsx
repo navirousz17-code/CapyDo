@@ -7,13 +7,16 @@ import { useTaskStore } from '@/hooks/useTaskStore';
 import { formatDueDate, isOverdue, getPriorityConfig, cn } from '@/utils';
 import toast from 'react-hot-toast';
 import TaskFormModal from './TaskFormModal';
+import { triggerReaction } from '@/components/MascotReaction';
+import { awardBadge } from '@/components/BadgeUnlock';
+import SubtasksPanel from './SubtasksPanel';
 
 interface Props {
   task: Task;
 }
 
 export default function TaskCard({ task }: Props) {
-  const { toggleTask, deleteTask, updateTask } = useTaskStore();
+  const { toggleTask, deleteTask, updateTask, tasks } = useTaskStore();
   const [showMenu, setShowMenu] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -22,7 +25,38 @@ export default function TaskCard({ task }: Props) {
   const overdue = isOverdue(task.due_date, task.status);
   const priority = getPriorityConfig(task.priority);
 
-  const handleToggle = () => toggleTask(task.id, !isCompleted);
+  const handleToggle = async () => {
+    await toggleTask(task.id, !isCompleted);
+    if (!isCompleted) {
+      // Check if all tasks are now complete
+      const remaining = tasks.filter(
+        (t) => t.id !== task.id && t.status !== 'completed' && t.status !== 'archived'
+      );
+
+      if (remaining.length === 0) {
+        setTimeout(() => triggerReaction('celebrate'), 300);
+        awardBadge('perfect_day');
+      } else {
+        triggerReaction('happy');
+      }
+
+      // Check first task badge
+      const completedCount = tasks.filter(t => t.status === 'completed').length;
+      if (completedCount === 0) awardBadge('first_task');
+
+      // Check centurion badge (100 tasks)
+      if (completedCount + 1 >= 100) awardBadge('centurion');
+
+      // Check speed runner (5 tasks completed today)
+      const today = new Date().toISOString().split('T')[0];
+      const todayCompleted = tasks.filter(t =>
+        t.status === 'completed' &&
+        t.completed_at &&
+        t.completed_at.startsWith(today)
+      ).length;
+      if (todayCompleted + 1 >= 5) awardBadge('speed_runner');
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm('Delete this task?')) return;
@@ -118,6 +152,9 @@ export default function TaskCard({ task }: Props) {
               {priority.label}
             </span>
           </div>
+
+          {/* Subtasks */}
+          {!isCompleted && <SubtasksPanel taskId={task.id} />}
         </div>
 
         {/* Actions menu */}

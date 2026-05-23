@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
   LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle
+  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -14,7 +14,10 @@ import { useAuth } from '@/hooks/useAuth';
 import { useTaskStore } from '@/hooks/useTaskStore';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useDailyStore } from '@/hooks/useDailyStore';
-import PeekingKalbo from '@/components/PeekingKalbo';
+import { usePetStore } from '@/hooks/usePetStore';
+import MascotReaction from '@/components/MascotReaction';
+import BadgeUnlock from '@/components/BadgeUnlock';
+import StreakPet from '@/components/StreakPet';
 
 interface Props {
   user: User;
@@ -22,13 +25,17 @@ interface Props {
 }
 
 const NAV_ITEMS = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/inbox', label: 'Priority Inbox', icon: Zap },
-  { href: '/dashboard/tasks', label: 'My Tasks', icon: CheckSquare },
-  { href: '/dashboard/daily', label: 'Daily Activities', icon: RefreshCw },
-  { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/dashboard/categories', label: 'Categories', icon: FolderOpen },
-  { href: '/dashboard/profile', label: 'Profile', icon: UserCircle },
+  { href: '/dashboard',            label: 'Dashboard',        icon: LayoutDashboard },
+  { href: '/dashboard/inbox',      label: 'Priority Inbox',   icon: Zap },
+  { href: '/dashboard/tasks',      label: 'My Tasks',         icon: CheckSquare },
+  { href: '/dashboard/daily',      label: 'Daily Activities', icon: RefreshCw },
+  { href: '/dashboard/analytics',  label: 'Analytics',        icon: BarChart3 },
+  { href: '/dashboard/badges',     label: 'Achievements',     icon: Trophy },
+  { href: '/dashboard/categories', label: 'Categories',       icon: FolderOpen },
+  { href: '/dashboard/profile',    label: 'Profile',          icon: UserCircle },
+  { href: '/dashboard/pomodoro',   label: 'Pomodoro',         icon: Timer },
+  { href: '/dashboard/challenge',  label: 'Daily Quest',      icon: Target },
+  { href: '/dashboard/recurring',  label: 'Recurring',        icon: Repeat },
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
@@ -81,6 +88,7 @@ export default function DashboardShell({ user, children }: Props) {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { fetchTasks, fetchCategories, getStats } = useTaskStore();
   const { fetchActivities, getStats: getDailyStats } = useDailyStore();
+  const { onTaskComplete, onHabitComplete, onChallengeComplete } = usePetStore();
 
   useRealtime(user.id);
 
@@ -104,12 +112,29 @@ export default function DashboardShell({ user, children }: Props) {
       })
       .catch(() => {});
 
-    // Listen for avatar updates from profile page
-    const handler = (e: CustomEvent) => {
+    // Sync avatar updates from profile page
+    const avatarHandler = (e: CustomEvent) => {
       setAvatarUrl(e.detail.avatarUrl);
     };
-    window.addEventListener('avatar-updated', handler as EventListener);
-    return () => window.removeEventListener('avatar-updated', handler as EventListener);
+    window.addEventListener('avatar-updated', avatarHandler as EventListener);
+
+    // ── Pet XP event listeners ──────────────────────────────────────
+    // These are fired from TaskCard, DailyStore, and ChallengeStore
+    // via: window.dispatchEvent(new CustomEvent('pet:task-complete'))
+    const onTask = () => onTaskComplete();
+    const onHabit = () => onHabitComplete();
+    const onChallenge = () => onChallengeComplete();
+
+    window.addEventListener('pet:task-complete', onTask);
+    window.addEventListener('pet:habit-complete', onHabit);
+    window.addEventListener('pet:challenge-complete', onChallenge);
+
+    return () => {
+      window.removeEventListener('avatar-updated', avatarHandler as EventListener);
+      window.removeEventListener('pet:task-complete', onTask);
+      window.removeEventListener('pet:habit-complete', onHabit);
+      window.removeEventListener('pet:challenge-complete', onChallenge);
+    };
   }, []);
 
   const stats = getStats();
@@ -134,7 +159,7 @@ export default function DashboardShell({ user, children }: Props) {
           <button className="ml-auto lg:hidden" style={{ color: 'var(--text-muted)' }} onClick={() => setSidebarOpen(false)}><X size={20} /></button>
         </div>
 
-        {/* User info with synced avatar */}
+        {/* User info */}
         <div className="px-5 py-4" style={{ borderBottom: '1px solid var(--border)' }}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 shadow-soft" style={{ border: '2px solid var(--border-strong)' }}>
@@ -207,7 +232,6 @@ export default function DashboardShell({ user, children }: Props) {
           <button className="lg:hidden" style={{ color: 'var(--text-secondary)' }} onClick={() => setSidebarOpen(true)}><Menu size={22} /></button>
           <div className="flex-1" />
           <div className="flex items-center gap-2">
-            {/* Top bar avatar — also synced */}
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-soft flex-shrink-0" style={{ border: '2px solid var(--border-strong)' }}>
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Avatar" width={32} height={32} className="w-full h-full object-cover" />
@@ -226,8 +250,15 @@ export default function DashboardShell({ user, children }: Props) {
         </main>
       </div>
 
-      {/* Peeking Kalbo 👀 */}
-      <PeekingKalbo />
+
+      {/* Mascot Reactions 🎭 */}
+      <MascotReaction />
+
+      {/* Badge Unlock popup 🏆 */}
+      <BadgeUnlock />
+
+      {/* Streak Pet 🐣 */}
+      <StreakPet />
     </div>
   );
 }

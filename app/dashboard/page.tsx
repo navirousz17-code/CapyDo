@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { getGreeting, formatDueDate, isOverdue, getPriorityConfig, cn } from '@/utils';
 import { format } from 'date-fns';
 import ShareCard from '@/components/ShareCard';
+import DailyChallenge from '@/components/DailyChallenge';
+import { StreakPetCard } from '@/components/StreakPet';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -109,6 +111,7 @@ export default function DashboardPage() {
                 className={`text-3xl font-extrabold ${card.valueColor}`}
                 style={{ fontFamily: "'Baloo 2', cursive" }}
               >
+                
                 {card.value}
               </div>
               <div className="text-sm text-bark-400 font-semibold mt-0.5">{card.label}</div>
@@ -116,7 +119,7 @@ export default function DashboardPage() {
           );
         })}
       </div>
-
+        <StreakPetCard />
       {/* Progress bar */}
       {stats.total > 0 && (
         <div className="card">
@@ -211,6 +214,9 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Daily Challenge Widget */}
+      <DailyChallenge mode="compact" />
 
       {/* No activities yet nudge */}
       {activities.length === 0 && (

@@ -99,8 +99,9 @@ export const useTaskStore = create<TaskStore>((set, get) => ({
       if (!res.ok) throw new Error('Failed to update task');
       const updated = await res.json();
       set((s) => ({
-        tasks: s.tasks.map((t) => (t.id === id ? updated : t)),
+        tasks: s.tasks.map((t) => (t.id === id ? updated : t)),       
       }));
+      window.dispatchEvent(new CustomEvent('pet:task-complete'));
       return updated;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to update task');

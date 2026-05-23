@@ -22,6 +22,11 @@ export default function CategoriesPage() {
     const result = await createCategory({ name: name.trim(), color, icon });
     if (result) {
       toast.success(`Category "${name}" created! 🌿`);
+      // Check organizer badge
+      if (categories.length + 1 >= 5) {
+        const { awardBadge } = await import('@/components/BadgeUnlock');
+        awardBadge('organizer');
+      }
       setName(''); setColor(CATEGORY_COLORS[0]); setIcon(CATEGORY_ICONS[0]);
       setShowForm(false);
     }
