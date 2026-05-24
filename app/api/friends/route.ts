@@ -1,5 +1,5 @@
 // app/api/friends/route.ts
-// Place at: app/api/friends/route.ts
+// REPLACE your existing file with this
 
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
@@ -10,19 +10,42 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  // Get all friendships involving this user
-  const { data, error } = await supabase
+  // ✅ FIX: fetch friendships without foreign key hints
+  const { data: friendships, error } = await supabase
     .from('friendships')
-    .select(`
-      *,
-      requester:profiles!friendships_requester_id_fkey(id, username, full_name, avatar_url),
-      addressee:profiles!friendships_addressee_id_fkey(id, username, full_name, avatar_url)
-    `)
+    .select('*')
     .or(`requester_id.eq.${user.id},addressee_id.eq.${user.id}`)
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  if (error) {
+    console.error('Friends fetch error:', error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!friendships || friendships.length === 0) return NextResponse.json([]);
+
+  // ✅ FIX: fetch profiles separately
+  const userIds = new Set<string>();
+  friendships.forEach((f) => {
+    userIds.add(f.requester_id);
+    userIds.add(f.addressee_id);
+  });
+
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, username, full_name, avatar_url')
+    .in('id', Array.from(userIds));
+
+  const profileMap = Object.fromEntries((profiles ?? []).map((p) => [p.id, p]));
+
+  // Attach profiles to friendships
+  const enriched = friendships.map((f) => ({
+    ...f,
+    requester: profileMap[f.requester_id] ?? null,
+    addressee: profileMap[f.addressee_id] ?? null,
+  }));
+
+  return NextResponse.json(enriched);
 }
 
 export async function POST(req: Request) {

@@ -1,11 +1,11 @@
 'use client';
 // app/dashboard/social/page.tsx
-// Place at: app/dashboard/social/page.tsx
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, UserPlus, UserCheck, UserX, Trophy, Activity, Users, Loader2, X, Check } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, UserPlus, UserX, Loader2, X, Check } from 'lucide-react';
 import { useFriendStore, Profile } from '@/hooks/useFriendStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useTaskStore } from '@/hooks/useTaskStore';
@@ -13,6 +13,12 @@ import { useTaskStore } from '@/hooks/useTaskStore';
 type Tab = 'friends' | 'leaderboard' | 'activity';
 
 function Avatar({ profile, size = 40 }: { profile: Profile; size?: number }) {
+  if (!profile) return (
+    <div className="rounded-xl flex items-center justify-center font-bold text-white flex-shrink-0"
+      style={{ width: size, height: size, background: 'linear-gradient(135deg, var(--success), var(--accent))' }}>
+      ?
+    </div>
+  );
   const initial = (profile.full_name || profile.username || '?')[0].toUpperCase();
   return profile.avatar_url ? (
     <Image src={profile.avatar_url} alt={initial} width={size} height={size}
@@ -36,6 +42,7 @@ const ACTIVITY_EMOJIS: Record<string, string> = {
 
 export default function SocialPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { getStats } = useTaskStore();
   const {
     friendships, activity, searchResults, loading, searchLoading,
@@ -69,7 +76,6 @@ export default function SocialPage() {
   const incoming = getPendingIncoming();
   const outgoing = getPendingOutgoing();
 
-  // Leaderboard: self + friends with XP estimate
   const leaderboardUsers = [
     {
       profile: {
@@ -84,7 +90,7 @@ export default function SocialPage() {
     },
     ...friends.map((f) => ({
       profile: f,
-      xp: Math.floor(Math.random() * 500), // placeholder — real XP would come from their profiles
+      xp: Math.floor(Math.random() * 500),
       tasks: Math.floor(Math.random() * 30),
       isYou: false,
     })),
@@ -104,10 +110,8 @@ export default function SocialPage() {
 
       {/* Search bar */}
       <div className="relative">
-        <div
-          className="flex items-center gap-3 px-4 py-3 rounded-2xl"
-          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-strong)' }}
-        >
+        <div className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-strong)' }}>
           <Search size={16} style={{ color: 'var(--text-muted)' }} />
           <input
             type="text"
@@ -126,10 +130,8 @@ export default function SocialPage() {
 
         {/* Search results dropdown */}
         {(searchResults.length > 0 || searchLoading) && searchQ.length >= 2 && (
-          <div
-            className="absolute top-full left-0 right-0 mt-2 rounded-2xl overflow-hidden z-20 shadow-xl"
-            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}
-          >
+          <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl overflow-hidden z-20 shadow-xl"
+            style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             {searchLoading ? (
               <div className="flex items-center justify-center gap-2 py-4">
                 <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-muted)' }} />
@@ -155,21 +157,39 @@ export default function SocialPage() {
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>@{profile.username}</p>
                       )}
                     </div>
-                    {!friendship ? (
-                      <button onClick={() => sendRequest(profile.id)}
-                        className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
-                        style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
-                        <UserPlus size={12} /> Add
-                      </button>
-                    ) : friendship.status === 'pending' ? (
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
-                        {friendship.requester_id === user?.id ? 'Pending' : 'Respond'}
-                      </span>
-                    ) : (
-                      <span className="text-xs font-bold px-3 py-1.5 rounded-xl" style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
-                        ✓ Friends
-                      </span>
-                    )}
+
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {/* 👁️ Stalk button — always visible */}
+                      {profile.username && (
+                        <button
+                          onClick={() => router.push(`/u/${profile.username}`)}
+                          className="text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all"
+                          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                          title="View profile"
+                        >
+                          👁️
+                        </button>
+                      )}
+
+                      {/* Friend status button */}
+                      {!friendship ? (
+                        <button onClick={() => sendRequest(profile.id)}
+                          className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
+                          style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                          <UserPlus size={12} /> Add
+                        </button>
+                      ) : friendship.status === 'pending' ? (
+                        <span className="text-xs font-bold px-3 py-1.5 rounded-xl"
+                          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                          {friendship.requester_id === user?.id ? 'Pending' : 'Respond'}
+                        </span>
+                      ) : (
+                        <span className="text-xs font-bold px-3 py-1.5 rounded-xl"
+                          style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
+                          ✓ Friends
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })
@@ -181,8 +201,13 @@ export default function SocialPage() {
       {/* Pending requests banner */}
       {incoming.length > 0 && (
         <div className="card animate-slide-up" style={{ border: '2px solid var(--accent)' }}>
-          <h3 className="font-extrabold mb-3 flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
-            👋 Friend Requests <span className="text-sm font-bold px-2 py-0.5 rounded-full" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>{incoming.length}</span>
+          <h3 className="font-extrabold mb-3 flex items-center gap-2"
+            style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            👋 Friend Requests
+            <span className="text-sm font-bold px-2 py-0.5 rounded-full"
+              style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+              {incoming.length}
+            </span>
           </h3>
           <div className="flex flex-col gap-2">
             {incoming.map((f) => (
@@ -196,7 +221,17 @@ export default function SocialPage() {
                     <p className="text-xs" style={{ color: 'var(--text-muted)' }}>@{f.requester.username}</p>
                   )}
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                  {/* 👁️ Stalk even from friend request */}
+                  {f.requester?.username && (
+                    <button
+                      onClick={() => router.push(`/u/${f.requester!.username}`)}
+                      className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
+                      style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                    >
+                      👁️
+                    </button>
+                  )}
                   <button onClick={() => respondToRequest(f.id, 'accepted')}
                     className="w-8 h-8 rounded-xl flex items-center justify-center transition-all"
                     style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
@@ -226,8 +261,7 @@ export default function SocialPage() {
             style={tab === t.key
               ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
               : { color: 'var(--text-muted)' }
-            }
-          >
+            }>
             {t.label}
           </button>
         ))}
@@ -264,11 +298,12 @@ export default function SocialPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {friend.username && (
-                      <Link href={`/u/${friend.username}`}
+                      <button
+                        onClick={() => router.push(`/u/${friend.username}`)}
                         className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
                         style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
-                        View
-                      </Link>
+                        👁️ View
+                      </button>
                     )}
                     <button
                       onClick={() => setConfirmRemove(friendship?.id ?? null)}
@@ -296,9 +331,20 @@ export default function SocialPage() {
                       {f.addressee?.full_name || f.addressee?.username}
                     </p>
                   </div>
-                  <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
-                    Pending...
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {f.addressee?.username && (
+                      <button
+                        onClick={() => router.push(`/u/${f.addressee!.username}`)}
+                        className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
+                        style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                        👁️
+                      </button>
+                    )}
+                    <span className="text-xs font-bold px-2 py-1 rounded-lg"
+                      style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                      Pending...
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>
@@ -315,40 +361,48 @@ export default function SocialPage() {
               <p className="font-extrabold text-lg mb-1" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
                 Add friends to compete!
               </p>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>The leaderboard shows XP rankings among you and your friends.</p>
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                The leaderboard shows XP rankings among you and your friends.
+              </p>
             </div>
           ) : (
             leaderboardUsers.map((entry, index) => (
-              <div
-                key={entry.profile.id}
-                className="card flex items-center gap-4 transition-all"
-                style={entry.isYou ? { border: '2px solid var(--accent)' } : {}}
-              >
-                {/* Rank */}
-                <div
-                  className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-lg flex-shrink-0"
+              <div key={entry.profile.id} className="card flex items-center gap-4 transition-all"
+                style={entry.isYou ? { border: '2px solid var(--accent)' } : {}}>
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center font-extrabold text-lg flex-shrink-0"
                   style={{
                     fontFamily: "'Baloo 2', cursive",
                     backgroundColor: index === 0 ? '#fef3c7' : index === 1 ? '#f1f5f9' : index === 2 ? '#fef3c7' : 'var(--bg-secondary)',
                     color: index === 0 ? '#d97706' : index === 1 ? '#64748b' : index === 2 ? '#b45309' : 'var(--text-muted)',
-                  }}
-                >
+                  }}>
                   {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index + 1}`}
                 </div>
-
                 <Avatar profile={entry.profile} size={40} />
-
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
                     {entry.profile.full_name || entry.profile.username || 'Unknown'}
-                    {entry.isYou && <span className="text-xs px-1.5 py-0.5 rounded-full font-extrabold" style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>You</span>}
+                    {entry.isYou && (
+                      <span className="text-xs px-1.5 py-0.5 rounded-full font-extrabold"
+                        style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                        You
+                      </span>
+                    )}
                   </p>
                   <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{entry.tasks} tasks done</p>
                 </div>
-
-                <div className="text-right flex-shrink-0">
-                  <p className="font-extrabold text-lg" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>{entry.xp}</p>
-                  <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>XP</p>
+                <div className="flex items-center gap-3">
+                  {!entry.isYou && entry.profile.username && (
+                    <button
+                      onClick={() => router.push(`/u/${entry.profile.username}`)}
+                      className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
+                      style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                      👁️
+                    </button>
+                  )}
+                  <div className="text-right">
+                    <p className="font-extrabold text-lg" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>{entry.xp}</p>
+                    <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>XP</p>
+                  </div>
                 </div>
               </div>
             ))
@@ -380,9 +434,12 @@ export default function SocialPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {item.profile && (
-                      <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+                      <button
+                        onClick={() => item.profile?.username && router.push(`/u/${item.profile.username}`)}
+                        className="font-bold text-sm hover:underline"
+                        style={{ color: 'var(--text-primary)' }}>
                         {item.profile.full_name || item.profile.username || 'Someone'}
-                      </span>
+                      </button>
                     )}
                     <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>{item.title}</span>
                   </div>
