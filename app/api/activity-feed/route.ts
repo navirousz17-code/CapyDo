@@ -36,7 +36,7 @@ export async function GET() {
   }
 
   // Fetch profiles separately
-  const userIds = [...new Set((activities ?? []).map((a) => a.user_id))];
+  const userIds = Array.from(new Set((activities ?? []).map((a) => a.user_id)));
   const { data: profiles } = await supabase
     .from('profiles')
     .select('id, username, full_name, avatar_url')
