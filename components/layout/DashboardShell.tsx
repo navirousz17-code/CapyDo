@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
   LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users
+  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -39,6 +39,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/recurring',  label: 'Recurring',        icon: Repeat },
   { href: '/dashboard/tracker', label: 'Tracker', icon: Hourglass },
   { href: '/dashboard/social', label: 'Social', icon: Users },
+  { href: '/dashboard/music',   label: 'My Music',          icon: Music }, 
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
