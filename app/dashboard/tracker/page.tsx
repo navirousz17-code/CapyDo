@@ -3,6 +3,7 @@
 // Place at: app/dashboard/tracker/page.tsx
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Play, Square, Trash2, Clock, Smile, Zap, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
 import { useTimeStore } from '@/hooks/useTimeStore';
 import { useTaskStore } from '@/hooks/useTaskStore';
@@ -10,11 +11,11 @@ import { cn } from '@/utils';
 
 // ── Mood config ──────────────────────────────────────────────────────────────
 const MOODS = [
-  { value: 1, emoji: '😞', label: 'Rough',     color: '#ef4444' },
-  { value: 2, emoji: '😕', label: 'Meh',       color: '#f97316' },
-  { value: 3, emoji: '😐', label: 'Okay',      color: '#eab308' },
-  { value: 4, emoji: '😊', label: 'Good',      color: '#22c55e' },
-  { value: 5, emoji: '🤩', label: 'Amazing!',  color: '#8b5cf6' },
+  { value: 1, image: '/mood_rough.png',   label: 'Rough',    color: '#ef4444' },
+  { value: 2, image: '/mood_meh.png',     label: 'Meh',      color: '#f97316' },
+  { value: 3, image: '/mood_okay.png',    label: 'Okay',     color: '#eab308' },
+  { value: 4, image: '/mood_good.png',    label: 'Good',     color: '#22c55e' },
+  { value: 5, image: '/mood_amazing.png', label: 'Amazing!', color: '#8b5cf6' },
 ];
 
 const ENERGY = [
@@ -295,7 +296,7 @@ export default function TrackerPage() {
                     : { backgroundColor: 'var(--bg-secondary)', border: '2px solid transparent' }
                   }
                 >
-                  <span className="text-2xl">{m.emoji}</span>
+                  <Image src={m.image} alt={m.label} width={56} height={56} className="object-contain" />
                   <span className="text-xs font-bold" style={{ color: selectedMood === m.value ? m.color : 'var(--text-muted)' }}>
                     {m.label}
                   </span>
@@ -349,7 +350,7 @@ export default function TrackerPage() {
             </h2>
             {moods.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-4xl mb-2">😊</div>
+                <Image src="/mood_okay.png" alt="No moods yet" width={64} height={64} className="object-contain mx-auto mb-2" />
                 <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>No mood entries yet</p>
                 <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Log your first mood above!</p>
               </div>
@@ -365,7 +366,7 @@ export default function TrackerPage() {
                           className="w-full rounded-t-lg transition-all"
                           style={{ height: `${(m.mood / 5) * 100}%`, backgroundColor: moodConfig.color, minHeight: '4px' }}
                         />
-                        <span className="text-xs">{moodConfig.emoji}</span>
+                        <Image src={moodConfig.image} alt={moodConfig.label} width={16} height={16} className="object-contain" />
                       </div>
                     );
                   })}
@@ -378,7 +379,7 @@ export default function TrackerPage() {
                     const energyConfig = ENERGY.find((e) => e.value === (m.energy ?? 3))!;
                     return (
                       <div key={m.id} className="flex items-center gap-3 p-3 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-                        <span className="text-2xl flex-shrink-0">{moodConfig.emoji}</span>
+                        <Image src={moodConfig.image} alt={moodConfig.label} width={36} height={36} className="object-contain flex-shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="font-bold text-sm" style={{ color: moodConfig.color }}>{moodConfig.label}</span>
