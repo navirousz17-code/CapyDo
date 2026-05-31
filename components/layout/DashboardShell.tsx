@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
   LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music
+  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music, Settings
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -40,6 +40,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/tracker', label: 'Tracker', icon: Hourglass },
   { href: '/dashboard/social', label: 'Social', icon: Users },
   { href: '/dashboard/music',   label: 'My Music',          icon: Music }, 
+  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
@@ -221,6 +222,27 @@ export default function DashboardShell({ user, children }: Props) {
             );
           })}
         </nav>
+        
+        {/* ── UMBRA SECRET TAB ── */}
+<div className="px-3 pb-2">
+  <Link
+    href="/dashboard/umbra"
+    onClick={() => setSidebarOpen(false)}
+    className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300"
+    style={{
+      background: pathname === '/dashboard/umbra'
+        ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+        : 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(79,70,229,0.08))',
+      border: '1px solid rgba(168,85,247,0.3)',
+      color: pathname === '/dashboard/umbra' ? '#fff' : 'rgba(196,181,253,0.8)',
+      boxShadow: '0 0 20px rgba(124,58,237,0.15)',
+    }}
+  >
+    <span style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:'radial-gradient(circle,#a855f7,#7c3aed)', boxShadow:'0 0 8px rgba(168,85,247,0.9)', display:'inline-block' }} />
+    <span>Umbra</span>
+    <span style={{ marginLeft:'auto', fontSize:9, color:'rgba(168,85,247,0.6)', fontFamily:"'Orbitron',sans-serif" }}>✦</span>
+  </Link>
+</div>
 
         {/* Sign out */}
         <div className="px-3 py-4" style={{ borderTop: '1px solid var(--border)' }}>
