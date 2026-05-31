@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -22,7 +23,6 @@ export default function LoginPage() {
       toast.error('Please fill in all fields');
       return;
     }
-
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -47,7 +47,10 @@ export default function LoginPage() {
         >
           Sign In
         </h1>
-        <p className="text-bark-400 font-medium">Good to see you again! 👋</p>
+        <p className="text-bark-400 font-medium flex items-center justify-center gap-1.5">
+          Good to see you again!
+          <Image src="/icon-wave.png" alt="wave" width={20} height={20} className="object-contain inline-block" />
+        </p>
       </div>
 
       <div className="card">
@@ -92,11 +95,7 @@ export default function LoginPage() {
             disabled={loading}
             className="btn-primary flex items-center justify-center gap-2 mt-1"
           >
-            {loading ? (
-              <Loader2 size={18} className="animate-spin" />
-            ) : (
-              <LogIn size={18} />
-            )}
+            {loading ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
             {loading ? 'Signing in…' : 'Sign In'}
           </button>
         </form>
@@ -104,18 +103,16 @@ export default function LoginPage() {
         <div className="mt-5 pt-5 border-t border-cream-200 text-center">
           <p className="text-bark-400 text-sm font-medium">
             Don't have an account?{' '}
-            <Link
-              href="/auth/signup"
-              className="text-moss-500 font-bold hover:text-moss-600 transition-colors"
-            >
+            <Link href="/auth/signup" className="text-moss-500 font-bold hover:text-moss-600 transition-colors">
               Sign up free
             </Link>
           </p>
         </div>
       </div>
 
-      <p className="text-center text-bark-400 text-xs font-medium mt-6">
-        By signing in, you agree to keep things cozy 🌿
+      <p className="text-center text-bark-400 text-xs font-medium mt-6 flex items-center justify-center gap-1.5">
+        By signing in, you agree to keep things cozy
+        <Image src="/icon-leaf-footer.png" alt="leaf" width={14} height={14} className="object-contain inline-block" />
       </p>
     </div>
   );

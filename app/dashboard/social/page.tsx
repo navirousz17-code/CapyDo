@@ -3,12 +3,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, UserPlus, UserX, Loader2, X, Check } from 'lucide-react';
 import { useFriendStore, Profile } from '@/hooks/useFriendStore';
 import { useAuth } from '@/hooks/useAuth';
 import { useTaskStore } from '@/hooks/useTaskStore';
+import { createClient } from '@/lib/supabase/client';
 
 type Tab = 'friends' | 'leaderboard' | 'activity';
 
@@ -45,7 +45,7 @@ export default function SocialPage() {
   const router = useRouter();
   const { getStats } = useTaskStore();
   const {
-    friendships, activity, searchResults, loading, searchLoading,
+    activity, searchResults, loading, searchLoading,
     setCurrentUserId, fetchFriends, fetchActivity, searchUsers,
     sendRequest, respondToRequest, removeFriend, clearSearch,
     getFriends, getPendingIncoming, getPendingOutgoing, getFriendshipWith,
@@ -54,6 +54,7 @@ export default function SocialPage() {
   const [tab, setTab] = useState<Tab>('friends');
   const [searchQ, setSearchQ] = useState('');
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
+  const [friendStats, setFriendStats] = useState<Record<string, { xp: number; tasks: number }>>({});
   const searchTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const stats = getStats();
@@ -66,15 +67,42 @@ export default function SocialPage() {
     }
   }, [user]);
 
+  const friends = getFriends();
+  const incoming = getPendingIncoming();
+  const outgoing = getPendingOutgoing();
+
+  // Fetch real task counts for friends from Supabase
+  useEffect(() => {
+    if (friends.length === 0) return;
+    const fetchFriendStats = async () => {
+      const supabase = createClient();
+      const ids = friends.map((f) => f.id);
+      const { data } = await supabase
+        .from('tasks')
+        .select('user_id')
+        .in('user_id', ids)
+        .eq('status', 'completed');
+
+      if (!data) return;
+      const counts: Record<string, number> = {};
+      data.forEach((row: { user_id: string }) => {
+  counts[row.user_id] = (counts[row.user_id] || 0) + 1;
+});
+      const result: Record<string, { xp: number; tasks: number }> = {};
+      ids.forEach((id) => {
+        const t = counts[id] || 0;
+        result[id] = { xp: t * 20, tasks: t };
+      });
+      setFriendStats(result);
+    };
+    fetchFriendStats();
+  }, [friends.length]);
+
   const handleSearch = (q: string) => {
     setSearchQ(q);
     if (searchTimeout.current) clearTimeout(searchTimeout.current);
     searchTimeout.current = setTimeout(() => searchUsers(q), 400);
   };
-
-  const friends = getFriends();
-  const incoming = getPendingIncoming();
-  const outgoing = getPendingOutgoing();
 
   const leaderboardUsers = [
     {
@@ -90,8 +118,8 @@ export default function SocialPage() {
     },
     ...friends.map((f) => ({
       profile: f,
-      xp: Math.floor(Math.random() * 500),
-      tasks: Math.floor(Math.random() * 30),
+      xp: friendStats[f.id]?.xp ?? 0,
+      tasks: friendStats[f.id]?.tasks ?? 0,
       isYou: false,
     })),
   ].sort((a, b) => b.xp - a.xp);
@@ -100,8 +128,9 @@ export default function SocialPage() {
     <div className="flex flex-col gap-6 animate-fade-in max-w-2xl mx-auto">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
-          Social 👥
+        <h1 className="text-3xl font-extrabold flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+          Social
+          <Image src="/icon-friends.png" alt="friends" width={32} height={32} className="object-contain" />
         </h1>
         <p className="font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
           Connect with friends, compete on the leaderboard, see activity.
@@ -157,21 +186,15 @@ export default function SocialPage() {
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>@{profile.username}</p>
                       )}
                     </div>
-
                     <div className="flex items-center gap-2 flex-shrink-0">
-                      {/* 👁️ Stalk button — always visible */}
                       {profile.username && (
-                        <button
-                          onClick={() => router.push(`/u/${profile.username}`)}
+                        <button onClick={() => router.push(`/u/${profile.username}`)}
                           className="text-xs font-bold px-2.5 py-1.5 rounded-xl transition-all"
                           style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
-                          title="View profile"
-                        >
+                          title="View profile">
                           👁️
                         </button>
                       )}
-
-                      {/* Friend status button */}
                       {!friendship ? (
                         <button onClick={() => sendRequest(profile.id)}
                           className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
@@ -203,7 +226,8 @@ export default function SocialPage() {
         <div className="card animate-slide-up" style={{ border: '2px solid var(--accent)' }}>
           <h3 className="font-extrabold mb-3 flex items-center gap-2"
             style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
-            👋 Friend Requests
+            <Image src="/icon-wave.png" alt="wave" width={20} height={20} className="object-contain" />
+            Friend Requests
             <span className="text-sm font-bold px-2 py-0.5 rounded-full"
               style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
               {incoming.length}
@@ -222,13 +246,10 @@ export default function SocialPage() {
                   )}
                 </div>
                 <div className="flex gap-2 items-center">
-                  {/* 👁️ Stalk even from friend request */}
                   {f.requester?.username && (
-                    <button
-                      onClick={() => router.push(`/u/${f.requester!.username}`)}
+                    <button onClick={() => router.push(`/u/${f.requester!.username}`)}
                       className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
-                      style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
-                    >
+                      style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                       👁️
                     </button>
                   )}
@@ -252,17 +273,18 @@ export default function SocialPage() {
       {/* Tabs */}
       <div className="flex gap-2 p-1 rounded-xl" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         {([
-          { key: 'friends', label: `👥 Friends (${friends.length})` },
-          { key: 'leaderboard', label: '🏆 Leaderboard' },
-          { key: 'activity', label: '📡 Activity' },
+          { key: 'friends',     label: 'Friends',     icon: '/icon-friends.png',     suffix: ` (${friends.length})` },
+          { key: 'leaderboard', label: 'Leaderboard', icon: '/icon-leaderboard.png', suffix: '' },
+          { key: 'activity',    label: 'Activity',    icon: '/icon-activity.png',    suffix: '' },
         ] as const).map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className="flex-1 py-2.5 rounded-lg text-sm font-bold transition-all"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-sm font-bold transition-all"
             style={tab === t.key
               ? { backgroundColor: 'var(--bg-card)', color: 'var(--text-primary)', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
               : { color: 'var(--text-muted)' }
             }>
-            {t.label}
+            <Image src={t.icon} alt={t.label} width={18} height={18} className="object-contain" />
+            {t.label}{t.suffix}
           </button>
         ))}
       </div>
@@ -274,12 +296,15 @@ export default function SocialPage() {
             [1,2,3].map((i) => <div key={i} className="h-16 rounded-2xl shimmer" />)
           ) : friends.length === 0 ? (
             <div className="card text-center py-12">
-              <div className="text-5xl mb-3">👥</div>
+              <div className="flex justify-center mb-3">
+                <Image src="/icon-friends.png" alt="no friends" width={56} height={56} className="object-contain" />
+              </div>
               <p className="font-extrabold text-lg mb-1" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
                 No friends yet!
               </p>
-              <p className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-                Search for users above to send friend requests 👆
+              <p className="text-sm font-medium flex items-center justify-center gap-1.5" style={{ color: 'var(--text-secondary)' }}>
+                Search for users above to send friend requests
+                <Image src="/icon-point.png" alt="point" width={18} height={18} className="object-contain" />
               </p>
             </div>
           ) : (
@@ -298,15 +323,13 @@ export default function SocialPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {friend.username && (
-                      <button
-                        onClick={() => router.push(`/u/${friend.username}`)}
+                      <button onClick={() => router.push(`/u/${friend.username}`)}
                         className="text-xs font-bold px-3 py-1.5 rounded-xl transition-all"
                         style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                         👁️ View
                       </button>
                     )}
-                    <button
-                      onClick={() => setConfirmRemove(friendship?.id ?? null)}
+                    <button onClick={() => setConfirmRemove(friendship?.id ?? null)}
                       className="w-8 h-8 rounded-xl flex items-center justify-center transition-all hover:bg-red-50 hover:text-red-400"
                       style={{ color: 'var(--text-muted)' }}>
                       <UserX size={14} />
@@ -317,7 +340,6 @@ export default function SocialPage() {
             })
           )}
 
-          {/* Outgoing requests */}
           {outgoing.length > 0 && (
             <div className="mt-2">
               <p className="text-xs font-extrabold uppercase tracking-wider mb-2 px-1" style={{ color: 'var(--text-muted)' }}>
@@ -333,8 +355,7 @@ export default function SocialPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     {f.addressee?.username && (
-                      <button
-                        onClick={() => router.push(`/u/${f.addressee!.username}`)}
+                      <button onClick={() => router.push(`/u/${f.addressee!.username}`)}
                         className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
                         style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                         👁️
@@ -357,7 +378,9 @@ export default function SocialPage() {
         <div className="flex flex-col gap-3">
           {leaderboardUsers.length <= 1 ? (
             <div className="card text-center py-12">
-              <div className="text-5xl mb-3">🏆</div>
+              <div className="flex justify-center mb-3">
+                <Image src="/icon-leaderboard.png" alt="leaderboard" width={56} height={56} className="object-contain" />
+              </div>
               <p className="font-extrabold text-lg mb-1" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
                 Add friends to compete!
               </p>
@@ -392,8 +415,7 @@ export default function SocialPage() {
                 </div>
                 <div className="flex items-center gap-3">
                   {!entry.isYou && entry.profile.username && (
-                    <button
-                      onClick={() => router.push(`/u/${entry.profile.username}`)}
+                    <button onClick={() => router.push(`/u/${entry.profile.username}`)}
                       className="text-xs font-bold px-2.5 py-1.5 rounded-xl"
                       style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
                       👁️
@@ -415,7 +437,9 @@ export default function SocialPage() {
         <div className="flex flex-col gap-3">
           {activity.length === 0 ? (
             <div className="card text-center py-12">
-              <div className="text-5xl mb-3">📡</div>
+              <div className="flex justify-center mb-3">
+                <Image src="/icon-activity.png" alt="activity" width={56} height={56} className="object-contain" />
+              </div>
               <p className="font-extrabold text-lg mb-1" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
                 No activity yet!
               </p>
@@ -434,8 +458,7 @@ export default function SocialPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     {item.profile && (
-                      <button
-                        onClick={() => item.profile?.username && router.push(`/u/${item.profile.username}`)}
+                      <button onClick={() => item.profile?.username && router.push(`/u/${item.profile.username}`)}
                         className="font-bold text-sm hover:underline"
                         style={{ color: 'var(--text-primary)' }}>
                         {item.profile.full_name || item.profile.username || 'Someone'}
