@@ -15,10 +15,13 @@ import { useTaskStore } from '@/hooks/useTaskStore';
 import { useRealtime } from '@/hooks/useRealtime';
 import { useDailyStore } from '@/hooks/useDailyStore';
 import { usePetStore } from '@/hooks/usePetStore';
+import ChatSidebar, { ChatButton } from '@/components/ui/ChatSidebar';
 import MascotReaction from '@/components/MascotReaction';
 import BadgeUnlock from '@/components/BadgeUnlock';
 import StreakPet from '@/components/StreakPet';
 import VoiceInput from '@/components/VoiceInput';
+import { useMessageStore } from '@/hooks/useMessageStore';   
+
 
 interface Props {
   user: User;
@@ -37,10 +40,10 @@ const NAV_ITEMS = [
   { href: '/dashboard/pomodoro',   label: 'Pomodoro',         icon: Timer },
   { href: '/dashboard/challenge',  label: 'Daily Quest',      icon: Target },
   { href: '/dashboard/recurring',  label: 'Recurring',        icon: Repeat },
-  { href: '/dashboard/tracker', label: 'Tracker', icon: Hourglass },
-  { href: '/dashboard/social', label: 'Social', icon: Users },
-  { href: '/dashboard/music',   label: 'My Music',          icon: Music }, 
-  { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+  { href: '/dashboard/tracker',    label: 'Tracker',          icon: Hourglass },
+  { href: '/dashboard/social',     label: 'Social',           icon: Users },
+  { href: '/dashboard/music',      label: 'My Music',         icon: Music },
+  { href: '/dashboard/settings',   label: 'Settings',         icon: Settings },
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
@@ -90,10 +93,12 @@ export default function DashboardShell({ user, children }: Props) {
   const pathname = usePathname();
   const { signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { fetchTasks, fetchCategories, getStats } = useTaskStore();
   const { fetchActivities, getStats: getDailyStats } = useDailyStore();
   const { onTaskComplete, onHabitComplete, onChallengeComplete } = usePetStore();
+  const { fetchConversations, subscribeToConversations } = useMessageStore();
 
   useRealtime(user.id);
 
@@ -101,12 +106,11 @@ export default function DashboardShell({ user, children }: Props) {
     fetchTasks();
     fetchCategories();
     fetchActivities();
+    fetchConversations(user.id);
 
-    // Apply saved theme
     const savedTheme = localStorage.getItem('todei-theme') || 'default';
     applyTheme(savedTheme);
 
-    // Load avatar
     fetch('/api/profile')
       .then(r => r.json())
       .then(p => {
@@ -117,28 +121,25 @@ export default function DashboardShell({ user, children }: Props) {
       })
       .catch(() => {});
 
-    // Sync avatar updates from profile page
-    const avatarHandler = (e: CustomEvent) => {
-      setAvatarUrl(e.detail.avatarUrl);
-    };
+    const avatarHandler = (e: CustomEvent) => setAvatarUrl(e.detail.avatarUrl);
     window.addEventListener('avatar-updated', avatarHandler as EventListener);
 
-    // ── Pet XP event listeners ──────────────────────────────────────
-    // These are fired from TaskCard, DailyStore, and ChallengeStore
-    // via: window.dispatchEvent(new CustomEvent('pet:task-complete'))
     const onTask = () => onTaskComplete();
     const onHabit = () => onHabitComplete();
     const onChallenge = () => onChallengeComplete();
-
     window.addEventListener('pet:task-complete', onTask);
     window.addEventListener('pet:habit-complete', onHabit);
     window.addEventListener('pet:challenge-complete', onChallenge);
+
+    // Subscribe to new messages in background
+    const unsubConvos = subscribeToConversations(user.id);
 
     return () => {
       window.removeEventListener('avatar-updated', avatarHandler as EventListener);
       window.removeEventListener('pet:task-complete', onTask);
       window.removeEventListener('pet:habit-complete', onHabit);
       window.removeEventListener('pet:challenge-complete', onChallenge);
+      unsubConvos();
     };
   }, []);
 
@@ -222,27 +223,41 @@ export default function DashboardShell({ user, children }: Props) {
             );
           })}
         </nav>
-        
-        {/* ── UMBRA SECRET TAB ── */}
-<div className="px-3 pb-2">
-  <Link
-    href="/dashboard/umbra"
-    onClick={() => setSidebarOpen(false)}
-    className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300"
-    style={{
-      background: pathname === '/dashboard/umbra'
-        ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
-        : 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(79,70,229,0.08))',
-      border: '1px solid rgba(168,85,247,0.3)',
-      color: pathname === '/dashboard/umbra' ? '#fff' : 'rgba(196,181,253,0.8)',
-      boxShadow: '0 0 20px rgba(124,58,237,0.15)',
-    }}
-  >
-    <span style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:'radial-gradient(circle,#a855f7,#7c3aed)', boxShadow:'0 0 8px rgba(168,85,247,0.9)', display:'inline-block' }} />
-    <span>Umbra</span>
-    <span style={{ marginLeft:'auto', fontSize:9, color:'rgba(168,85,247,0.6)', fontFamily:"'Orbitron',sans-serif" }}>✦</span>
-  </Link>
-</div>
+
+        {/* Umbra secret tab */}
+        <div className="px-3 pb-2">
+          <Link
+            href="/dashboard/umbra"
+            onClick={() => setSidebarOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl font-semibold text-sm transition-all duration-300"
+            style={{
+              background: pathname === '/dashboard/umbra'
+                ? 'linear-gradient(135deg, #7c3aed, #4f46e5)'
+                : 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(79,70,229,0.08))',
+              border: '1px solid rgba(168,85,247,0.3)',
+              color: pathname === '/dashboard/umbra' ? '#fff' : 'rgba(196,181,253,0.8)',
+              boxShadow: '0 0 20px rgba(124,58,237,0.15)',
+            }}
+            onMouseEnter={(e) => {
+              if (pathname !== '/dashboard/umbra') {
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 0 30px rgba(124,58,237,0.4)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.6)';
+                (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(124,58,237,0.25), rgba(79,70,229,0.18))';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (pathname !== '/dashboard/umbra') {
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 0 20px rgba(124,58,237,0.15)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(168,85,247,0.3)';
+                (e.currentTarget as HTMLElement).style.background = 'linear-gradient(135deg, rgba(124,58,237,0.12), rgba(79,70,229,0.08))';
+              }
+            }}
+          >
+            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: 'radial-gradient(circle,#a855f7,#7c3aed)', boxShadow: '0 0 8px rgba(168,85,247,0.9)', display: 'inline-block' }} />
+            <span>Umbra</span>
+            <span style={{ marginLeft: 'auto', fontSize: 9, color: 'rgba(168,85,247,0.6)', fontFamily: "'Orbitron',sans-serif" }}>✦</span>
+          </Link>
+        </div>
 
         {/* Sign out */}
         <div className="px-3 py-4" style={{ borderTop: '1px solid var(--border)' }}>
@@ -257,7 +272,9 @@ export default function DashboardShell({ user, children }: Props) {
         <header className="sticky top-0 z-10 backdrop-blur px-5 py-3 flex items-center gap-4" style={{ backgroundColor: 'var(--bg-card)', borderBottom: '1px solid var(--border)', transition: 'background-color 0.4s ease' }}>
           <button className="lg:hidden" style={{ color: 'var(--text-secondary)' }} onClick={() => setSidebarOpen(true)}><Menu size={22} /></button>
           <div className="flex-1" />
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {/* Chat button */}
+            <ChatButton onClick={() => setChatOpen(true)} />
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-soft flex-shrink-0" style={{ border: '2px solid var(--border-strong)' }}>
               {avatarUrl ? (
                 <Image src={avatarUrl} alt="Avatar" width={32} height={32} className="w-full h-full object-cover" />
@@ -276,18 +293,19 @@ export default function DashboardShell({ user, children }: Props) {
         </main>
       </div>
 
-
-      {/* Mascot Reactions 🎭 */}
+      {/* Mascot Reactions */}
       <MascotReaction />
 
-      {/* Badge Unlock popup 🏆 */}
+      {/* Badge Unlock popup */}
       <BadgeUnlock />
 
-      {/* Streak Pet 🐣 */}
+      {/* Streak Pet */}
       <StreakPet />
-      
+
       <VoiceInput />
 
+      {/* Chat Sidebar */}
+      <ChatSidebar open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );
 }
