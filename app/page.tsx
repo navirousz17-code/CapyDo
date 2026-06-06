@@ -1,274 +1,146 @@
 'use client';
-// app/dashboard/page.tsx
 
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { CheckCircle2, Clock, AlertTriangle, TrendingUp, Plus, ArrowRight, RefreshCw, Flame, Share2 } from 'lucide-react';
-import { useTaskStore } from '@/hooks/useTaskStore';
-import { useDailyStore } from '@/hooks/useDailyStore';
-import { useAuth } from '@/hooks/useAuth';
-import { useWidgetStore } from '@/hooks/useWidgetStore';
-import { getGreeting, formatDueDate, isOverdue, getPriorityConfig, cn } from '@/utils';
-import { format } from 'date-fns';
-import ShareCard from '@/components/ShareCard';
-import DailyChallenge from '@/components/DailyChallenge';
-import WidgetCustomizer from '@/components/WidgetCustomizer';
-import dynamic from 'next/dynamic';
-const StreakPetCard = dynamic(
-  () => import('@/components/StreakPet').then(m => m.StreakPetCard),
-  { ssr: false }
-);
+import { useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const { tasks, loading, getStats } = useTaskStore();
-  const { activities, fetchActivities, toggleActivity, getStats: getDailyStats } = useDailyStore();
-  const { getEnabled } = useWidgetStore();
-  const [showShare, setShowShare] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const stats = getStats();
-  const dailyStats = getDailyStats();
-  const displayName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Friend';
-  const enabledWidgets = getEnabled();
+const FLOAT_ASSETS = [
+  '/float-star.png',
+  '/float-star-orange.png',
+  '/float-leaf.png',
+  '/float-clover.png',
+  '/float-sparkle.png',
+  '/float-star-pink.png',
+  '/float-leaf-green.png',
+  '/float-leaf-teal.png',
+];
 
-  useEffect(() => { setMounted(true); }, []);
-  useEffect(() => { fetchActivities(); }, []);
+export default function LandingPage() {
+  const [particles, setParticles] = useState<
+    { id: number; src: string; left: string; duration: string; delay: string; size: number }[]
+  >([]);
 
-  const recentTasks = tasks
-    .filter((t) => t.status !== 'completed' && t.status !== 'archived')
-    .slice(0, 5);
-
-  const STAT_CARDS = [
-    { label: 'Total Tasks', value: stats.total, icon: CheckCircle2, bg: 'bg-cream-100', iconColor: 'text-bark-400', valueColor: 'text-bark-600' },
-    { label: 'Completed', value: stats.completed, icon: CheckCircle2, bg: 'bg-moss-50', iconColor: 'text-moss-500', valueColor: 'text-moss-600' },
-    { label: 'Pending', value: stats.pending, icon: Clock, bg: 'bg-cream-200', iconColor: 'text-bark-500', valueColor: 'text-bark-600' },
-    { label: 'Overdue', value: stats.overdue, icon: AlertTriangle, bg: stats.overdue > 0 ? 'bg-red-50' : 'bg-cream-100', iconColor: stats.overdue > 0 ? 'text-red-400' : 'text-bark-400', valueColor: stats.overdue > 0 ? 'text-red-600' : 'text-bark-600' },
-  ];
-
-  const renderWidget = (id: string) => {
-    switch (id) {
-      case 'greeting':
-        return (
-          <div key="greeting" className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div className="flex-1">
-              <p className="text-bark-400 text-sm font-semibold mb-1">{format(new Date(), 'EEEE, MMMM d')}</p>
-              <h1 className="text-3xl font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>
-                {getGreeting()}, {displayName}! 🦫
-              </h1>
-              <p className="text-bark-400 font-medium mt-1">
-                {stats.pending === 0
-                  ? "You're all caught up! Amazing work ✨"
-                  : `You have ${stats.pending} task${stats.pending !== 1 ? 's' : ''} to tackle today.`}
-              </p>
-            </div>
-            <Image
-              src="/logo.png" alt="CapyDo" width={64} height={64}
-              className="rounded-2xl shadow-bark animate-float hidden sm:block cursor-pointer hover:scale-110 transition-transform"
-              onClick={() => setShowShare(true)}
-            />
-          </div>
-        );
-
-      case 'stats':
-        return (
-          <div key="stats" className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {STAT_CARDS.map((card) => {
-              const Icon = card.icon;
-              return (
-                <div key={card.label} className={`card ${card.bg} border-0 card-lift`}>
-                  <div className="flex items-center justify-between mb-3">
-                    <div className={`w-9 h-9 rounded-xl bg-white/60 flex items-center justify-center ${card.iconColor}`}>
-                      <Icon size={18} />
-                    </div>
-                  </div>
-                  <div className={`text-3xl font-extrabold ${card.valueColor}`} style={{ fontFamily: "'Baloo 2', cursive" }}>
-                    {card.value}
-                  </div>
-                  <div className="text-sm text-bark-400 font-semibold mt-0.5">{card.label}</div>
-                </div>
-              );
-            })}
-          </div>
-        );
-
-      case 'progress':
-        return stats.total > 0 ? (
-          <div key="progress" className="card">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <TrendingUp size={18} className="text-moss-500" />
-                <span className="font-bold text-bark-600">Completion Rate</span>
-              </div>
-              <span className="text-2xl font-extrabold text-moss-500" style={{ fontFamily: "'Baloo 2', cursive" }}>
-                {stats.completionRate}%
-              </span>
-            </div>
-            <div className="h-3 bg-cream-200 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-moss-400 to-moss-300 rounded-full transition-all duration-700" style={{ width: `${stats.completionRate}%` }} />
-            </div>
-            <div className="flex justify-between text-xs text-bark-400 font-semibold mt-2">
-              <span>{stats.completed} completed</span>
-              <span>{stats.pending} remaining</span>
-            </div>
-          </div>
-        ) : null;
-
-      case 'challenge':
-        return <DailyChallenge key="challenge" mode="compact" />;
-
-      case 'habits':
-        return activities.length > 0 ? (
-          <div key="habits" className="card">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <RefreshCw size={18} className="text-moss-500" />
-                <h2 className="text-lg font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>Today's Habits</h2>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-bold text-bark-400">{dailyStats.completedToday}/{dailyStats.total} done</span>
-                <Link href="/dashboard/daily" className="flex items-center gap-1 text-sm text-moss-500 font-bold hover:text-moss-600 transition-colors">
-                  View all <ArrowRight size={14} />
-                </Link>
-              </div>
-            </div>
-            <div className="h-2 bg-cream-200 rounded-full overflow-hidden mb-4">
-              <div className="h-full bg-gradient-to-r from-moss-400 to-moss-300 rounded-full transition-all duration-700" style={{ width: `${dailyStats.completionRate}%` }} />
-            </div>
-            <div className="flex flex-col gap-2">
-              {activities.slice(0, 5).map((activity) => (
-                <button key={activity.id} onClick={() => toggleActivity(activity.id)}
-                  className={cn('flex items-center gap-3 p-2.5 rounded-xl transition-all text-left hover:bg-cream-50 group', activity.completed_today && 'opacity-60')}>
-                  <div className={cn('w-6 h-6 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all', activity.completed_today ? 'border-transparent' : 'border-bark-300')}
-                    style={activity.completed_today ? { backgroundColor: activity.color } : {}}>
-                    {activity.completed_today && <span className="text-white text-xs font-bold">✓</span>}
-                  </div>
-                  <span className="text-lg flex-shrink-0">{activity.icon}</span>
-                  <span className={cn('font-semibold text-sm text-bark-600 flex-1', activity.completed_today && 'line-through text-bark-400')}>{activity.title}</span>
-                  {(activity.streak ?? 0) > 1 && (
-                    <span className="flex items-center gap-0.5 text-xs font-bold text-amber-500"><Flame size={11} /> {activity.streak}</span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div key="habits-empty" onClick={() => router.push('/dashboard/daily')}
-            className="card card-lift flex items-center gap-4 border-dashed border-2 border-cream-300 bg-cream-50/50 hover:border-moss-300 transition-colors group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-moss-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🔄</div>
-            <div>
-              <p className="font-extrabold text-bark-500" style={{ fontFamily: "'Baloo 2', cursive" }}>Start Daily Habits</p>
-              <p className="text-bark-400 text-sm font-medium">Track activities that reset every day</p>
-            </div>
-            <ArrowRight size={18} className="text-bark-300 ml-auto group-hover:text-moss-500 transition-colors" />
-          </div>
-        );
-
-      case 'tasks':
-        return (
-          <div key="tasks" className="card">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-lg font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>Pending Tasks</h2>
-              <Link href="/dashboard/tasks" className="flex items-center gap-1 text-sm text-moss-500 font-bold hover:text-moss-600 transition-colors">
-                View all <ArrowRight size={14} />
-              </Link>
-            </div>
-            {loading ? (
-              <div className="flex flex-col gap-3">{[1,2,3].map((i) => <div key={i} className="h-14 rounded-xl shimmer" />)}</div>
-            ) : recentTasks.length === 0 ? (
-              <div className="text-center py-10">
-                <div className="text-4xl mb-3">🎉</div>
-                <p className="font-bold text-bark-500 mb-1">All clear!</p>
-                <p className="text-bark-400 text-sm font-medium">No pending tasks right now.</p>
-                <button onClick={() => router.push('/dashboard/tasks')} className="btn-primary inline-flex items-center gap-2 mt-4 text-sm">
-                  <Plus size={16} /> Add a Task
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {recentTasks.map((task) => {
-                  const priority = getPriorityConfig(task.priority);
-                  const overdue = isOverdue(task.due_date, task.status);
-                  return (
-                    <div key={task.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-cream-50 transition-colors group">
-                      <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: priority.color }} />
-                      <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-bark-600 text-sm truncate">{task.title}</p>
-                        {task.due_date && (
-                          <p className={`text-xs font-medium mt-0.5 ${overdue ? 'text-red-500' : 'text-bark-400'}`}>
-                            {overdue ? '⚠️ Overdue · ' : '📅 '}{formatDueDate(task.due_date)}
-                          </p>
-                        )}
-                      </div>
-                      {task.category && (
-                        <span className="hidden sm:flex text-xs font-bold px-2 py-1 rounded-lg flex-shrink-0"
-                          style={{ backgroundColor: task.category.color + '25', color: task.category.color }}>
-                          {task.category.icon} {task.category.name}
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-
-      case 'pomodoro':
-        return (
-          <div key="pomodoro" onClick={() => router.push('/dashboard/pomodoro')}
-            className="card card-lift flex items-center gap-4 hover:border-red-300 transition-colors group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">🍅</div>
-            <div>
-              <p className="font-extrabold text-bark-500" style={{ fontFamily: "'Baloo 2', cursive" }}>Start Pomodoro</p>
-              <p className="text-bark-400 text-sm font-medium">Focus timer — 25 min work sessions</p>
-            </div>
-            <ArrowRight size={18} className="text-bark-300 ml-auto group-hover:text-red-400 transition-colors" />
-          </div>
-        );
-
-      case 'mood':
-        return (
-          <div key="mood" onClick={() => router.push('/dashboard/tracker')}
-            className="card card-lift flex items-center gap-4 hover:border-purple-300 transition-colors group cursor-pointer">
-            <div className="w-12 h-12 rounded-xl bg-purple-50 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">😊</div>
-            <div>
-              <p className="font-extrabold text-bark-500" style={{ fontFamily: "'Baloo 2', cursive" }}>Log Your Mood</p>
-              <p className="text-bark-400 text-sm font-medium">How are you feeling today?</p>
-            </div>
-            <ArrowRight size={18} className="text-bark-300 ml-auto group-hover:text-purple-400 transition-colors" />
-          </div>
-        );
-
-      case 'share':
-        return (
-          <button key="share" onClick={() => setShowShare(true)}
-            className="card card-lift flex items-center gap-4 border-dashed border-2 border-bark-200 bg-cream-50/50 hover:border-bark-400 transition-colors group w-full text-left">
-            <div className="w-12 h-12 rounded-xl bg-bark-100 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">📊</div>
-            <div>
-              <p className="font-extrabold text-bark-500" style={{ fontFamily: "'Baloo 2', cursive" }}>Share Your Progress</p>
-              <p className="text-bark-400 text-sm font-medium">Generate a shareable progress card</p>
-            </div>
-            <Share2 size={18} className="text-bark-300 ml-auto group-hover:text-bark-500 transition-colors" />
-          </button>
-        );
-
-      default:
-        return null;
-    }
-  };
+  useEffect(() => {
+    const generated = Array.from({ length: 12 }, (_, i) => ({
+      id: i,
+      src: FLOAT_ASSETS[i % FLOAT_ASSETS.length],
+      left: `${Math.random() * 100}%`,
+      duration: `${8 + Math.random() * 8}s`,
+      delay: `${Math.random() * 10}s`,
+      size: 24 + Math.random() * 20,
+    }));
+    setParticles(generated);
+  }, []);
 
   return (
-    <div className="flex flex-col gap-7 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div />
-        <WidgetCustomizer />
-      </div>
-      <StreakPetCard />
-      {mounted && enabledWidgets.map((w) => renderWidget(w.id))}
-      {showShare && <ShareCard onClose={() => setShowShare(false)} />}
+    <div className="min-h-screen parchment-bg overflow-hidden relative">
+      {/* Floating particles */}
+      {particles.map((p) => (
+        <span key={p.id} className="leaf-particle select-none"
+          style={{ left: p.left, animationDuration: p.duration, animationDelay: p.delay, position: 'fixed', display: 'inline-block' }}>
+          <Image src={p.src} alt="" width={p.size} height={p.size} className="object-contain" />
+        </span>
+      ))}
+
+      {/* Blobs */}
+      <div className="absolute top-0 right-0 w-96 h-96 bg-moss-200 rounded-full opacity-20 blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-cream-400 rounded-full opacity-20 blur-3xl translate-y-1/2 -translate-x-1/2" />
+
+      {/* Navbar */}
+      <nav className="relative z-10 flex items-center justify-between px-8 py-5 max-w-6xl mx-auto">
+        <div className="flex items-center gap-2">
+          <Image src="/logo.png" alt="CapyDo" width={44} height={44} className="rounded-xl" />
+          <span className="text-xl font-bold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>CapyDo</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <Link href="/auth/login" className="btn-ghost text-sm">Sign In</Link>
+          <Link href="/auth/signup" className="btn-primary text-sm">Get Started Free</Link>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <main className="relative z-10 flex flex-col items-center text-center px-6 pt-8 pb-20 max-w-4xl mx-auto">
+        {/* Splash logo */}
+        <div className="relative mb-6 animate-bounce-in">
+          <div className="absolute inset-0 bg-moss-200 rounded-full blur-3xl opacity-30 scale-110" />
+          <Image src="/splashlogo.png" alt="CapyDo mascot" width={360} height={280}
+            className="relative z-10 drop-shadow-2xl" priority />
+        </div>
+
+        <div className="animate-slide-up" style={{ animationDelay: '0.2s' }}>
+          <div className="inline-flex items-center gap-2 bg-cream-200 border border-cream-300 text-bark-500 text-sm font-semibold px-4 py-1.5 rounded-full mb-5">
+            <Image src="/float-sparkle.png" alt="" width={14} height={14} className="object-contain" />
+            Your cozy productivity companion
+          </div>
+
+          <h1 className="text-5xl md:text-6xl font-extrabold text-bark-600 leading-tight mb-5 text-shadow-bark"
+            style={{ fontFamily: "'Baloo 2', cursive" }}>
+            Organize your day,{' '}
+            <span className="text-moss-500 relative">
+              your way
+              <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 200 12" fill="none">
+                <path d="M2 8 Q50 2 100 8 Q150 14 198 8" stroke="#82bf7b" strokeWidth="3" strokeLinecap="round" fill="none" />
+              </svg>
+            </span>
+          </h1>
+
+          <p className="text-bark-400 text-lg max-w-xl mx-auto mb-8 leading-relaxed">
+            A warm and friendly task manager that keeps your goals in sight and your stress in check.
+            Built for real humans who just want to get things done.{' '}
+            <Image src="/float-leaf-green.png" alt="" width={20} height={20} className="object-contain inline-block align-middle" />
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/auth/signup" className="btn-primary text-base px-8 py-3 inline-flex items-center gap-2">
+              <CheckCircle2 size={18} /> Start Organizing Free
+            </Link>
+            <Link href="/auth/login" className="btn-secondary text-base px-8 py-3">
+              I have an account
+            </Link>
+          </div>
+        </div>
+
+        {/* Feature pills */}
+        <div className="flex flex-wrap justify-center gap-3 mt-14 animate-fade-in" style={{ animationDelay: '0.5s' }}>
+          {[
+            { icon: '/icon-sync.png',     label: 'Real-time sync'    },
+            { icon: '/icon-category.png', label: 'Smart categories'  },
+            { icon: '/icon-calendar.png', label: 'Due date tracking' },
+            { icon: '/icon-priority.png', label: 'Priority levels'   },
+            { icon: '/icon-secure.png',   label: 'Secure & private'  },
+          ].map((feat) => (
+            <div key={feat.label}
+              className="flex items-center gap-2 bg-white/80 backdrop-blur border border-cream-200 rounded-full px-4 py-2 text-sm font-semibold text-bark-500 shadow-soft card-lift">
+              <Image src={feat.icon} alt={feat.label} width={20} height={20} className="object-contain" />
+              {feat.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-6 mt-16 w-full max-w-sm">
+          {[
+            { value: '100%', label: 'Free to use' },
+            { value: '∞',    label: 'Tasks'       },
+            { value: '24/7', label: 'Sync'        },
+          ].map((stat) => (
+            <div key={stat.label} className="text-center">
+              <div className="text-3xl font-extrabold text-bark-500" style={{ fontFamily: "'Baloo 2', cursive" }}>
+                {stat.value}
+              </div>
+              <div className="text-xs text-bark-400 font-semibold mt-0.5">{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="relative z-10 text-center pb-6 text-bark-400 text-sm font-medium flex items-center justify-center gap-1.5">
+        Made with
+        <Image src="/icon-leaf-footer.png" alt="leaf" width={16} height={16} className="object-contain inline-block" />
+        by CapyDo
+      </footer>
     </div>
   );
 }
