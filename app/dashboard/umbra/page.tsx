@@ -347,7 +347,7 @@ function ComingSoonPage() {
 
         {/* Bottom rune */}
         <p style={{ fontSize: 8, letterSpacing: '0.7em', color: 'rgba(168,85,247,0.18)', margin: 0, animation: 'whisperFlicker 6s ease-in-out infinite' }}>
-          ✦ &nbsp; UMBRA IV &nbsp; · &nbsp; TODEI-LIST &nbsp; ✦
+          ✦ &nbsp; UMBRA IV &nbsp; · &nbsp; × CapyDo &nbsp; ✦
         </p>
       </div>
 

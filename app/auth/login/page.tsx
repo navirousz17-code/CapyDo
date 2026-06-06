@@ -19,15 +19,12 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+    if (!email || !password) { toast.error('Please fill in all fields'); return; }
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      toast.success('Welcome back! 🌿');
+      toast.success('Welcome back! 🦫');
       router.push('/dashboard');
       router.refresh();
     } catch (err: unknown) {
@@ -41,10 +38,7 @@ export default function LoginPage() {
   return (
     <div className="animate-slide-up">
       <div className="text-center mb-8">
-        <h1
-          className="text-3xl font-extrabold text-bark-600 mb-2"
-          style={{ fontFamily: "'Baloo 2', cursive" }}
-        >
+        <h1 className="text-3xl font-extrabold text-bark-600 mb-2" style={{ fontFamily: "'Baloo 2', cursive" }}>
           Sign In
         </h1>
         <p className="text-bark-400 font-medium flex items-center justify-center gap-1.5">
@@ -57,44 +51,23 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="flex flex-col gap-5">
           <div>
             <label className="block text-sm font-bold text-bark-500 mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="hello@example.com"
-              className="input-field"
-              required
-              autoComplete="email"
-            />
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="hello@example.com" className="input-field" required autoComplete="email" />
           </div>
-
           <div>
             <label className="block text-sm font-bold text-bark-500 mb-2">Password</label>
             <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
+              <input type={showPassword ? 'text' : 'password'} value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Your password"
-                className="input-field pr-12"
-                required
-                autoComplete="current-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-bark-400 hover:text-bark-500 transition-colors"
-              >
+                placeholder="Your password" className="input-field pr-12" required autoComplete="current-password" />
+              <button type="button" onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-bark-400 hover:text-bark-500 transition-colors">
                 {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
           </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary flex items-center justify-center gap-2 mt-1"
-          >
+          <button type="submit" disabled={loading}
+            className="btn-primary flex items-center justify-center gap-2 mt-1">
             {loading ? <Loader2 size={18} className="animate-spin" /> : <LogIn size={18} />}
             {loading ? 'Signing in…' : 'Sign In'}
           </button>

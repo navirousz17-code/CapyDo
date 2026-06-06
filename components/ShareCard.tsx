@@ -65,9 +65,9 @@ export default function ShareCard({ onClose }: Props) {
   };
 
   const handleShare = async () => {
-    const text = `🌿 My TODEI-LIST Progress\n✅ ${stats.completed} tasks completed\n📊 ${stats.completionRate}% completion rate\n🔥 ${longestStreak} day streak\n\nJoin me at todei-list.app`;
+    const text = `🌿 My CapyDo Progress\n✅ ${stats.completed} tasks completed\n📊 ${stats.completionRate}% completion rate\n🔥 ${longestStreak} day streak\n\nJoin me at capydo.app`;
     if (navigator.share) {
-      await navigator.share({ title: 'My TODEI-LIST Progress', text });
+      await navigator.share({ title: '🦫 My CapyDo Progress', text });
     } else {
       navigator.clipboard.writeText(text);
       toast.success('Progress copied to clipboard!');
@@ -262,7 +262,7 @@ export default function ShareCard({ onClose }: Props) {
                 style={{ objectFit: 'contain', display: 'block' }} />
               <span style={{ color: '#b07840', fontSize: 11, fontWeight: 800, letterSpacing: '0.05em' }}>TODEI-LIST</span>
             </div>
-            <span style={{ color: '#c4a060', fontSize: 10, fontWeight: 600 }}>todei-list.app</span>
+            <span style={{ color: '#c4a060', fontSize: 10, fontWeight: 600 }}>capydo.app</span>
           </div>
         </div>
 

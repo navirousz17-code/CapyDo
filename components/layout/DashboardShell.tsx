@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
   LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music, Settings
+  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music, Settings, Camera
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -20,8 +20,7 @@ import MascotReaction from '@/components/MascotReaction';
 import BadgeUnlock from '@/components/BadgeUnlock';
 import StreakPet from '@/components/StreakPet';
 import VoiceInput from '@/components/VoiceInput';
-import { useMessageStore } from '@/hooks/useMessageStore';   
-
+import { useMessageStore } from '@/hooks/useMessageStore';
 
 interface Props {
   user: User;
@@ -44,6 +43,7 @@ const NAV_ITEMS = [
   { href: '/dashboard/social',     label: 'Social',           icon: Users },
   { href: '/dashboard/music',      label: 'My Music',         icon: Music },
   { href: '/dashboard/settings',   label: 'Settings',         icon: Settings },
+  { href: '/dashboard/photobooth', label: 'Photobooth', icon: Camera }, 
 ];
 
 const THEMES: Record<string, Record<string, string>> = {
@@ -108,16 +108,16 @@ export default function DashboardShell({ user, children }: Props) {
     fetchActivities();
     fetchConversations(user.id);
 
-    const savedTheme = localStorage.getItem('todei-theme') || 'default';
+    const savedTheme = localStorage.getItem('capydo-theme') || 'default';
     applyTheme(savedTheme);
 
     fetch('/api/profile')
       .then(r => r.json())
       .then(p => {
         if (p.avatar_url) setAvatarUrl(p.avatar_url);
-        const theme = localStorage.getItem('todei-theme') || p.theme || 'default';
+        const theme = localStorage.getItem('capydo-theme') || p.theme || 'default';
         applyTheme(theme);
-        localStorage.setItem('todei-theme', theme);
+        localStorage.setItem('capydo-theme', theme);
       })
       .catch(() => {});
 
@@ -131,7 +131,6 @@ export default function DashboardShell({ user, children }: Props) {
     window.addEventListener('pet:habit-complete', onHabit);
     window.addEventListener('pet:challenge-complete', onChallenge);
 
-    // Subscribe to new messages in background
     const unsubConvos = subscribeToConversations(user.id);
 
     return () => {
@@ -160,8 +159,8 @@ export default function DashboardShell({ user, children }: Props) {
       >
         {/* Logo */}
         <div className="flex items-center gap-3 px-5 py-5" style={{ borderBottom: '1px solid var(--border)' }}>
-          <Image src="/logo.png" alt="TODEI-LIST" width={36} height={36} className="rounded-lg" />
-          <span className="text-lg font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>TODEI-LIST</span>
+          <Image src="/logo.png" alt="CapyDo" width={36} height={36} className="rounded-lg" />
+          <span className="text-lg font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>CapyDo</span>
           <button className="ml-auto lg:hidden" style={{ color: 'var(--text-muted)' }} onClick={() => setSidebarOpen(false)}><X size={20} /></button>
         </div>
 
@@ -273,7 +272,6 @@ export default function DashboardShell({ user, children }: Props) {
           <button className="lg:hidden" style={{ color: 'var(--text-secondary)' }} onClick={() => setSidebarOpen(true)}><Menu size={22} /></button>
           <div className="flex-1" />
           <div className="flex items-center gap-3">
-            {/* Chat button */}
             <ChatButton onClick={() => setChatOpen(true)} />
             <div className="w-8 h-8 rounded-lg overflow-hidden shadow-soft flex-shrink-0" style={{ border: '2px solid var(--border-strong)' }}>
               {avatarUrl ? (
@@ -293,18 +291,10 @@ export default function DashboardShell({ user, children }: Props) {
         </main>
       </div>
 
-      {/* Mascot Reactions */}
       <MascotReaction />
-
-      {/* Badge Unlock popup */}
       <BadgeUnlock />
-
-      {/* Streak Pet */}
       <StreakPet />
-
       <VoiceInput />
-
-      {/* Chat Sidebar */}
       <ChatSidebar open={chatOpen} onClose={() => setChatOpen(false)} />
     </div>
   );

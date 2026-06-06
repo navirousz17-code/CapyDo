@@ -200,7 +200,7 @@ export const usePetStore = create<PetStore>()(
       dismissEvolutionBanner: () => set({ showEvolutionBanner: false, pendingEvolution: null }),
     }),
     {
-      name: 'todei-pet-store',
+      name: 'capydo-task-store',
       partialize: (s) => ({ xp: s.xp, lastEvolutionStage: s.lastEvolutionStage }),
     }
   )

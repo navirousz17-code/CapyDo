@@ -102,7 +102,7 @@ export default function PublicProfilePage() {
   if (loading) return (
     <div className="min-h-screen parchment-bg flex items-center justify-center">
       <div className="flex flex-col items-center gap-3">
-        <Image src="/logo.png" alt="TODEI-LIST" width={60} height={60} className="rounded-xl animate-float" />
+        <Image src="/logo.png" alt="CapyDo" width={60} height={60} className="rounded-xl animate-float" />
         <div className="flex gap-1">
           {[0,1,2].map(i => <div key={i} className="w-2 h-2 rounded-full bg-bark-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
         </div>
@@ -171,8 +171,8 @@ export default function PublicProfilePage() {
       {/* Nav */}
       <div className="w-full px-6 py-4 flex items-center justify-between max-w-2xl mx-auto">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="TODEI-LIST" width={36} height={36} className="rounded-lg" />
-          <span className="font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>TODEI-LIST</span>
+          <Image src="/logo.png" alt="CapyDo" width={36} height={36} className="rounded-lg" />
+          <span className="font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>capydo.app</span>
         </Link>
         <Link href="/auth/signup" className="btn-primary text-sm">Join Free</Link>
       </div>
@@ -553,7 +553,7 @@ export default function PublicProfilePage() {
           <p className="font-bold text-bark-500 mb-3 text-sm">Want your own profile like this?</p>
           <Link href="/auth/signup" className="btn-primary inline-flex items-center gap-2">
             <Image src="/icon-leaf-footer.png" alt="" width={16} height={16} className="object-contain" />
-            Join TODEI-LIST Free
+            🦫 Join CapyDo Free
           </Link>
         </div>
       </div>

@@ -112,12 +112,12 @@ export default function MusicPage() {
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('todei-music');
+      const saved = localStorage.getItem('capydo-music');
       if (saved) {
         setPlaylists(JSON.parse(saved));
       } else {
         setPlaylists(DEFAULT_PLAYLISTS);
-        localStorage.setItem('todei-music', JSON.stringify(DEFAULT_PLAYLISTS));
+        localStorage.setItem('capydo-music', JSON.stringify(DEFAULT_PLAYLISTS));
       }
     } catch {
       setPlaylists(DEFAULT_PLAYLISTS);
@@ -126,7 +126,7 @@ export default function MusicPage() {
 
   const save = (updated: Playlist[]) => {
     setPlaylists(updated);
-    localStorage.setItem('todei-music', JSON.stringify(updated));
+    localStorage.setItem('capydo-music', JSON.stringify(updated));
   };
 
   const handleAdd = () => {
