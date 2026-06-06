@@ -3,7 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'TODEI-LIST – Your Cozy Task Companion',
+  title: 'CapyDo — Do more. Capy happy.',
   description: 'A warm, friendly todo app to keep your tasks organized and your day on track.',
   icons: {
     icon: '/logo.png',
