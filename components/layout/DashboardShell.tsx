@@ -5,8 +5,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { User } from '@supabase/supabase-js';
 import {
-  LayoutDashboard, CheckSquare, FolderOpen, LogOut,
-  Menu, X, RefreshCw, BarChart3, Zap, UserCircle, Trophy, Timer, Repeat, Target, Hourglass, Users, Music, Settings, Camera
+  LayoutDashboard, LogOut,
+  Menu, X, Timer, Target, Music, Camera, Wallet
 } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/utils';
@@ -27,24 +27,36 @@ interface Props {
   children: React.ReactNode;
 }
 
-const NAV_ITEMS = [
+// icon can be either a lucide component or a custom image path (string)
+type NavIcon = React.ElementType | string;
+
+const NAV_ITEMS: { href: string; label: string; icon: NavIcon }[] = [
   { href: '/dashboard',            label: 'Dashboard',        icon: LayoutDashboard },
-  { href: '/dashboard/inbox',      label: 'Priority Inbox',   icon: Zap },
-  { href: '/dashboard/tasks',      label: 'My Tasks',         icon: CheckSquare },
-  { href: '/dashboard/daily',      label: 'Daily Activities', icon: RefreshCw },
-  { href: '/dashboard/analytics',  label: 'Analytics',        icon: BarChart3 },
-  { href: '/dashboard/badges',     label: 'Achievements',     icon: Trophy },
-  { href: '/dashboard/categories', label: 'Categories',       icon: FolderOpen },
-  { href: '/dashboard/profile',    label: 'Profile',          icon: UserCircle },
+  { href: '/dashboard/inbox',      label: 'Priority Inbox',   icon: '/icon-inbox.png' },
+  { href: '/dashboard/tasks',      label: 'My Tasks',         icon: '/icon-check.png' },
+  { href: '/dashboard/daily',      label: 'Daily Activities', icon: '/icon-daily.png' },
+  { href: '/dashboard/analytics',  label: 'Analytics',        icon: '/icon-analytics.png' },
+  { href: '/dashboard/badges',     label: 'Achievements',     icon: '/icon-badge.png' },
+  { href: '/dashboard/categories', label: 'Categories',       icon: '/icon-category.png' },
+  { href: '/dashboard/profile',    label: 'Profile',          icon: '/icon-profile.png' },
   { href: '/dashboard/pomodoro',   label: 'Pomodoro',         icon: Timer },
   { href: '/dashboard/challenge',  label: 'Daily Quest',      icon: Target },
-  { href: '/dashboard/recurring',  label: 'Recurring',        icon: Repeat },
-  { href: '/dashboard/tracker',    label: 'Tracker',          icon: Hourglass },
-  { href: '/dashboard/social',     label: 'Social',           icon: Users },
+  { href: '/dashboard/recurring',  label: 'Recurring',        icon: '/icon-recurring.png' },
+  { href: '/dashboard/tracker',    label: 'Tracker',          icon: '/icon-stopwatch.png' },
+  { href: '/dashboard/social',     label: 'Social',           icon: '/icon-friends.png' },
   { href: '/dashboard/music',      label: 'My Music',         icon: Music },
-  { href: '/dashboard/settings',   label: 'Settings',         icon: Settings },
-  { href: '/dashboard/photobooth', label: 'Photobooth', icon: Camera }, 
+  { href: '/dashboard/finance',    label: 'Finance',          icon: Wallet },
+  { href: '/dashboard/settings',   label: 'Settings',         icon: '/icon-settings.png' },
+  { href: '/dashboard/photobooth', label: 'Photobooth',       icon: Camera },
 ];
+
+function NavIconRenderer({ icon, size = 18 }: { icon: NavIcon; size?: number }) {
+  if (typeof icon === 'string') {
+    return <Image src={icon} alt="" width={size} height={size} className="object-contain flex-shrink-0" />;
+  }
+  const Icon = icon;
+  return <Icon size={size} />;
+}
 
 const THEMES: Record<string, Record<string, string>> = {
   default: {
@@ -201,7 +213,7 @@ export default function DashboardShell({ user, children }: Props) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 py-4 flex flex-col gap-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
+          {NAV_ITEMS.map(({ href, label, icon }) => {
             const active = pathname === href;
             return (
               <Link
@@ -216,7 +228,7 @@ export default function DashboardShell({ user, children }: Props) {
                 onMouseEnter={(e) => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-secondary)'; }}
                 onMouseLeave={(e) => { if (!active) (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent'; }}
               >
-                <Icon size={18} />
+                <NavIconRenderer icon={icon} size={18} />
                 {label}
               </Link>
             );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import {
   Plus, Search, SlidersHorizontal, CheckSquare,
   Clock, AlertTriangle, CalendarCheck, ListFilter
@@ -46,20 +47,15 @@ export default function TasksPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1
-            className="text-2xl font-extrabold text-bark-600"
-            style={{ fontFamily: "'Baloo 2', cursive" }}
-          >
-            My Tasks ✅
+          <h1 className="text-2xl font-extrabold text-bark-600 flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive" }}>
+            My Tasks
+            <Image src="/icon-check.png" alt="tasks" width={28} height={28} className="object-contain" />
           </h1>
           <p className="text-bark-400 text-sm font-medium mt-0.5">
             {tasks.length} task{tasks.length !== 1 ? 's' : ''} found
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="btn-primary flex items-center gap-2"
-        >
+        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
           <Plus size={18} /> Add Task
         </button>
       </div>
@@ -92,7 +88,6 @@ export default function TasksPage() {
       {/* Expanded filters */}
       {showFilters && (
         <div className="card animate-slide-up flex flex-col gap-4">
-          {/* Status filter */}
           <div>
             <p className="text-xs font-bold text-bark-400 uppercase tracking-wider mb-2">Status</p>
             <div className="flex flex-wrap gap-2">
@@ -113,7 +108,6 @@ export default function TasksPage() {
             </div>
           </div>
 
-          {/* Category filter */}
           {categories.length > 0 && (
             <div>
               <p className="text-xs font-bold text-bark-400 uppercase tracking-wider mb-2">Category</p>
@@ -133,9 +127,7 @@ export default function TasksPage() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategoryId(cat.id === selectedCategoryId ? null : cat.id)}
-                    className={cn(
-                      'flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border'
-                    )}
+                    className={cn('flex items-center gap-1 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all border')}
                     style={
                       selectedCategoryId === cat.id
                         ? { backgroundColor: cat.color, color: 'white', borderColor: cat.color }
@@ -149,7 +141,6 @@ export default function TasksPage() {
             </div>
           )}
 
-          {/* Sort */}
           <div>
             <p className="text-xs font-bold text-bark-400 uppercase tracking-wider mb-2">Sort By</p>
             <div className="flex flex-wrap gap-2">
@@ -199,7 +190,7 @@ export default function TasksPage() {
         </div>
       ) : tasks.length === 0 ? (
         <div className="card text-center py-16">
-          <div className="text-5xl mb-4">🌿</div>
+          <Image src="/float-leaf-green.png" alt="empty" width={56} height={56} className="object-contain mx-auto mb-4" />
           <h3
             className="text-xl font-extrabold text-bark-500 mb-2"
             style={{ fontFamily: "'Baloo 2', cursive" }}

@@ -1,0 +1,1447 @@
+﻿// FILE: app\dashboard\challenge\page.tsx
+'use client';
+// app/dashboard/challenge/page.tsx
+
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { Trophy, Target } from 'lucide-react';
+import { useChallengeStore } from '@/hooks/useChallengeStore';
+import { useTaskStore } from '@/hooks/useTaskStore';
+import { useDailyStore } from '@/hooks/useDailyStore';
+import DailyChallenge from '@/components/DailyChallenge';
+import AchievementAnimation from '@/components/AchievementAnimation';
+
+const XP_MILESTONES = [
+  { xp: 50,   label: 'Seedling',  image: '/rank_seedling.png'  },
+  { xp: 150,  label: 'Sprout',    image: '/rank_sprout.png'    },
+  { xp: 300,  label: 'Sapling',   image: '/rank_sapling.png'   },
+  { xp: 500,  label: 'Explorer',  image: '/rank_explorer.png'  },
+  { xp: 750,  label: 'Champion',  image: '/rank_champion.png'  },
+  { xp: 1000, label: 'Legend',    image: '/rank_legend.png'    },
+];
+
+const ALL_CHALLENGES = [
+  { image: '/quest_first_step.png',      title: 'First Step',      description: 'Complete at least 1 task today',    xp: 30  },
+  { image: '/quest_task_trio.png',       title: 'Task Trio',       description: 'Complete 3 tasks today',             xp: 50  },
+  { image: '/quest_priority_slayer.png', title: 'Priority Slayer', description: 'Complete 1 high-priority task',      xp: 75  },
+  { image: '/quest_debt_clearer.png',    title: 'Debt Clearer',    description: 'Complete 1 overdue task',            xp: 80  },
+  { image: '/quest_fire_fighter.png',    title: 'Fire Fighter',    description: 'Complete an urgent task',            xp: 100 },
+  { image: '/quest_high_five.png',       title: 'High Five',       description: 'Complete 5 tasks today',             xp: 100 },
+  { image: '/quest_perfect_day.png',     title: 'Perfect Day',     description: 'Complete all your daily habits',     xp: 120 },
+  { image: '/quest_double_threat.png',   title: 'Double Threat',   description: 'Complete 2 high or urgent tasks',   xp: 150 },
+];
+
+export default function ChallengePage() {
+  const { challenge, progress, completed, fetchChallenge } = useChallengeStore();
+  const { getStats } = useTaskStore();
+  const { getStats: getDailyStats } = useDailyStore();
+
+  const [showRankAnim, setShowRankAnim] = useState(false);
+  const [newRank, setNewRank] = useState<typeof XP_MILESTONES[0] | null>(null);
+  const prevMilestoneRef = useRef<string | null>(null);
+
+  useEffect(() => { fetchChallenge(); }, []);
+
+  const taskStats = getStats();
+  const dailyStats = getDailyStats();
+
+  const estimatedXP = taskStats.completed * 20 + dailyStats.completedToday * 15 + (completed && challenge ? challenge.xp : 0);
+  const currentMilestone = XP_MILESTONES.filter((m) => estimatedXP >= m.xp).pop() ?? XP_MILESTONES[0];
+  const nextMilestone = XP_MILESTONES.find((m) => estimatedXP < m.xp);
+  const xpToNext = nextMilestone ? nextMilestone.xp - estimatedXP : 0;
+  const milestoneProgress = nextMilestone
+    ? ((estimatedXP - (currentMilestone?.xp ?? 0)) / (nextMilestone.xp - (currentMilestone?.xp ?? 0))) * 100
+    : 100;
+
+  // Detect rank up
+  useEffect(() => {
+    if (prevMilestoneRef.current && prevMilestoneRef.current !== currentMilestone.label) {
+      setNewRank(currentMilestone);
+      setShowRankAnim(true);
+    }
+    prevMilestoneRef.current = currentMilestone.label;
+  }, [currentMilestone.label]);
+
+  return (
+    <div className="flex flex-col gap-7 animate-fade-in max-w-2xl mx-auto">
+
+      {/* Epic rank up animation */}
+      {showRankAnim && newRank && (
+        <AchievementAnimation
+          type="rank"
+          title={newRank.label}
+          subtitle="You reached a new rank!"
+          image={newRank.image}
+          onDismiss={() => setShowRankAnim(false)}
+        />
+      )}
+
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Image src="/daily_challenge.png" alt="Daily Challenge" width={64} height={64} className="drop-shadow-lg animate-float" />
+        <div>
+          <h1 className="text-3xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Daily Quest ðŸŽ¯
+          </h1>
+          <p className="font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            A new challenge awaits every day. Complete it to earn XP!
+          </p>
+        </div>
+      </div>
+
+      {/* Today's challenge */}
+      <DailyChallenge mode="full" />
+
+      {/* XP / Rank card */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <Trophy size={18} style={{ color: 'var(--success)' }} />
+          <h2 className="font-extrabold text-lg" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Your Rank
+          </h2>
+        </div>
+
+        <div className="flex items-center gap-4 mb-4">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+            style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <Image src={currentMilestone.image} alt={currentMilestone.label} width={56} height={56} className="object-contain" />
+          </div>
+          <div className="flex-1">
+            <p className="text-xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+              {currentMilestone.label}
+            </p>
+            <p className="text-sm font-semibold" style={{ color: 'var(--text-secondary)' }}>{estimatedXP} XP earned</p>
+            {nextMilestone && (
+              <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                {xpToNext} XP to{' '}
+                <Image src={nextMilestone.image} alt={nextMilestone.label} width={14} height={14} className="inline object-contain" />{' '}
+                {nextMilestone.label}
+              </p>
+            )}
+          </div>
+          <div className="text-right flex-shrink-0" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            <span className="text-2xl font-extrabold">{estimatedXP}</span>
+            <span className="text-sm font-bold ml-1" style={{ color: 'var(--text-muted)' }}>XP</span>
+          </div>
+        </div>
+
+        {nextMilestone && (
+          <div>
+            <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{ width: `${milestoneProgress}%`, background: 'linear-gradient(90deg, var(--success), #82c97a)' }} />
+            </div>
+            <div className="flex justify-between text-xs font-semibold mt-1.5" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1">
+                <Image src={currentMilestone.image} alt={currentMilestone.label} width={14} height={14} className="inline object-contain" />
+                {currentMilestone.label}
+              </span>
+              <span className="flex items-center gap-1">
+                <Image src={nextMilestone.image} alt={nextMilestone.label} width={14} height={14} className="inline object-contain" />
+                {nextMilestone.label}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* All rank milestones row */}
+        <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: '1px solid var(--border)' }}>
+          {XP_MILESTONES.map((m) => {
+            const reached = estimatedXP >= m.xp;
+            const isCurrent = currentMilestone.label === m.label;
+            return (
+              <div key={m.label} className="flex flex-col items-center gap-1" title={`${m.label} â€” ${m.xp} XP`}>
+                <div className="rounded-xl p-1 transition-all"
+                  style={{ backgroundColor: isCurrent ? 'var(--bg-secondary)' : 'transparent', border: isCurrent ? '2px solid var(--success)' : '2px solid transparent', opacity: reached ? 1 : 0.35 }}>
+                  <Image src={m.image} alt={m.label} width={32} height={32} className="object-contain" />
+                </div>
+                <span className="text-[9px] font-bold" style={{ color: isCurrent ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                  {m.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { icon: 'âœ…', label: 'Tasks Done',   value: taskStats.completed },
+          { icon: 'ðŸ”„', label: 'Habits Today', value: `${dailyStats.completedToday}/${dailyStats.total}` },
+          { icon: 'âš¡', label: 'Total XP',     value: estimatedXP },
+        ].map((s) => (
+          <div key={s.label} className="card text-center border-0" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="text-2xl mb-1">{s.icon}</div>
+            <div className="text-2xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+              {s.value}
+            </div>
+            <div className="text-xs font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Quest Board */}
+      <div className="card">
+        <div className="flex items-center gap-2 mb-4">
+          <Target size={18} style={{ color: 'var(--success)' }} />
+          <h2 className="font-extrabold text-lg" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Quest Board
+          </h2>
+          <span className="text-xs font-semibold ml-1" style={{ color: 'var(--text-muted)' }}>All possible daily quests</span>
+        </div>
+
+        <div className="flex flex-col gap-2">
+          {ALL_CHALLENGES.map((c) => {
+            const isToday = challenge?.title === c.title;
+            return (
+              <div key={c.title} className="flex items-center gap-3 p-3 rounded-xl transition-all"
+                style={{ backgroundColor: isToday ? 'var(--bg-secondary)' : 'transparent', border: isToday ? '1px solid var(--border-strong)' : '1px solid transparent' }}>
+                <Image src={c.image} alt={c.title} width={36} height={36} className="object-contain flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                    {c.title}
+                    {isToday && (
+                      <span className="text-xs font-extrabold px-1.5 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }}>
+                        TODAY
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-xs font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>{c.description}</p>
+                </div>
+                <span className="text-xs font-extrabold flex-shrink-0 px-2 py-1 rounded-lg"
+                  style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
+                  +{c.xp} XP
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Tip */}
+      <div className="rounded-2xl p-4 text-sm font-semibold"
+        style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+        ðŸ’¡ Challenges are picked smartly based on your pending tasks. Urgent tasks? You'll get a firefighting quest. Lots of habits? A Perfect Day quest. They refresh every midnight ðŸŒ™
+      </div>
+    </div>
+  );
+}
+
+// FILE: app\dashboard\recurring\page.tsx
+'use client';
+// app/dashboard/recurring/page.tsx
+
+import { useEffect, useState } from 'react';
+import Image from 'next/image';
+import { Plus, Trash2, Play, ToggleLeft, ToggleRight, Clock, X, Loader2 } from 'lucide-react';
+import { useRecurringStore, RecurringTask, RecurringFormData } from '@/hooks/useRecurringStore';
+import { useTaskStore } from '@/hooks/useTaskStore';
+import { getPriorityConfig } from '@/utils';
+
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const INTERVAL_LABELS: Record<string, string> = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly' };
+const INTERVAL_ICONS: Record<string, string> = {
+  daily: '/icon-recurring.png',
+  weekly: '/icon-calendar.png',
+  monthly: '/icon-calendar.png',
+};
+
+function intervalDescription(task: RecurringTask): string {
+  if (task.interval === 'daily') return 'Every day';
+  if (task.interval === 'weekly' && task.day_of_week != null) return `Every ${DAYS[task.day_of_week]}`;
+  if (task.interval === 'monthly' && task.day_of_month != null) return `Every month on day ${task.day_of_month}`;
+  return task.interval;
+}
+
+// â”€â”€ Form Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function RecurringFormModal({
+  onClose, onSave, categories,
+}: {
+  onClose: () => void;
+  onSave: (data: RecurringFormData) => Promise<RecurringTask | null>;
+  categories: { id: string; name: string; color: string; icon: string }[];
+}) {
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<RecurringFormData>({
+    title: '', description: '', priority: 'medium', category_id: '',
+    interval: 'daily', day_of_week: 1, day_of_month: 1,
+  });
+
+  const set = (k: keyof RecurringFormData, v: unknown) => setForm((prev) => ({ ...prev, [k]: v }));
+
+  const handleSubmit = async () => {
+    if (!form.title.trim()) return;
+    setSaving(true);
+    await onSave(form);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md rounded-2xl p-6 animate-bounce-in" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            <Image src="/icon-recurring.png" alt="recurring" width={24} height={24} className="object-contain" />
+            New Recurring Task
+          </h2>
+          <button onClick={onClose} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Task Title *</label>
+            <input className="input-field" placeholder="e.g. Weekly team meeting" value={form.title}
+              onChange={(e) => set('title', e.target.value)} maxLength={100} autoFocus />
+          </div>
+
+          <div>
+            <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Description</label>
+            <textarea className="input-field resize-none" rows={2} placeholder="Optional notes..." value={form.description}
+              onChange={(e) => set('description', e.target.value)} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Priority</label>
+              <select className="input-field" value={form.priority} onChange={(e) => set('priority', e.target.value)}>
+                <option value="low">ðŸŸ¢ Low</option>
+                <option value="medium">ðŸŸ¡ Medium</option>
+                <option value="high">ðŸŸ  High</option>
+                <option value="urgent">ðŸ”´ Urgent</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Category</label>
+              <select className="input-field" value={form.category_id} onChange={(e) => set('category_id', e.target.value)}>
+                <option value="">None</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.icon} {c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--text-secondary)' }}>Repeats</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['daily', 'weekly', 'monthly'] as const).map((i) => (
+                <button key={i} onClick={() => set('interval', i)}
+                  className="flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-all"
+                  style={form.interval === i
+                    ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }
+                    : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                  <Image src={INTERVAL_ICONS[i]} alt={i} width={16} height={16} className="object-contain" />
+                  {INTERVAL_LABELS[i]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {form.interval === 'weekly' && (
+            <div>
+              <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--text-secondary)' }}>Day of week</label>
+              <div className="flex gap-1.5 flex-wrap">
+                {DAYS.map((d, i) => (
+                  <button key={d} onClick={() => set('day_of_week', i)}
+                    className="w-10 h-10 rounded-xl text-xs font-bold transition-all"
+                    style={form.day_of_week === i
+                      ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }
+                      : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {form.interval === 'monthly' && (
+            <div>
+              <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                Day of month: <span style={{ color: 'var(--text-primary)' }}>{form.day_of_month}</span>
+              </label>
+              <input type="range" min={1} max={28} step={1} value={form.day_of_month}
+                onChange={(e) => set('day_of_month', Number(e.target.value))} className="w-full" />
+              <div className="flex justify-between text-xs font-semibold mt-1" style={{ color: 'var(--text-muted)' }}>
+                <span>1st</span><span>28th</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+          <button onClick={handleSubmit} disabled={saving || !form.title.trim()} className="btn-primary flex-1 flex items-center justify-center gap-2">
+            {saving
+              ? <Loader2 size={16} className="animate-spin" />
+              : <Image src="/icon-recurring.png" alt="create" width={16} height={16} className="object-contain" />
+            }
+            {saving ? 'Saving...' : 'Create'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export default function RecurringPage() {
+  const { tasks, loading, fetchRecurring, updateRecurring, deleteRecurring, createRecurring, spawnNow } = useRecurringStore();
+  const { categories } = useTaskStore();
+  const [showForm, setShowForm] = useState(false);
+  const [spawning, setSpawning] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  useEffect(() => { fetchRecurring(); }, []);
+
+  const handleSpawn = async (id: string) => {
+    setSpawning(id);
+    await spawnNow(id);
+    setSpawning(null);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeleting(id);
+    await deleteRecurring(id);
+    setDeleting(null);
+  };
+
+  const daily = tasks.filter((t) => t.interval === 'daily');
+  const weekly = tasks.filter((t) => t.interval === 'weekly');
+  const monthly = tasks.filter((t) => t.interval === 'monthly');
+
+  const groups = [
+    { label: 'Daily', icon: '/icon-recurring.png', items: daily },
+    { label: 'Weekly', icon: '/icon-calendar.png', items: weekly },
+    { label: 'Monthly', icon: '/icon-calendar.png', items: monthly },
+  ].filter((g) => g.items.length > 0);
+
+  return (
+    <div className="flex flex-col gap-7 animate-fade-in max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Recurring Tasks
+            <Image src="/icon-recurring.png" alt="recurring" width={32} height={32} className="object-contain" />
+          </h1>
+          <p className="font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            Tasks that auto-spawn on a schedule.
+          </p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+          <Plus size={16} /> New
+        </button>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { icon: '/icon-recurring.png', label: 'Daily',   value: daily.length },
+          { icon: '/icon-calendar.png',  label: 'Weekly',  value: weekly.length },
+          { icon: '/icon-calendar.png',  label: 'Monthly', value: monthly.length },
+        ].map((s) => (
+          <div key={s.label} className="card text-center border-0" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="flex justify-center mb-1">
+              <Image src={s.icon} alt={s.label} width={28} height={28} className="object-contain" />
+            </div>
+            <div className="text-2xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>{s.value}</div>
+            <div className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => <div key={i} className="h-20 rounded-2xl shimmer" />)}
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && tasks.length === 0 && (
+        <div className="card flex flex-col items-center py-16 text-center">
+          <Image src="/icon-recurring.png" alt="no recurring" width={64} height={64} className="object-contain mb-4" />
+          <h2 className="text-xl font-extrabold mb-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            No recurring tasks yet
+          </h2>
+          <p className="font-medium mb-6 max-w-xs" style={{ color: 'var(--text-secondary)' }}>
+            Create tasks that automatically respawn daily, weekly, or monthly.
+          </p>
+          <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2">
+            <Plus size={16} /> Create your first one
+          </button>
+        </div>
+      )}
+
+      {/* Grouped task list */}
+      {!loading && groups.map((group) => (
+        <div key={group.label} className="flex flex-col gap-3">
+          <h2 className="text-base font-extrabold px-1 flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-secondary)' }}>
+            <Image src={group.icon} alt={group.label} width={20} height={20} className="object-contain" />
+            {group.label}
+          </h2>
+          {group.items.map((task) => {
+            const priority = getPriorityConfig(task.priority);
+            const todayStr = new Date().toISOString().split('T')[0];
+            const spawnedToday = task.last_spawned_at === todayStr;
+
+            return (
+              <div key={task.id} className="card flex items-start gap-4 transition-all" style={{ opacity: task.is_active ? 1 : 0.5 }}>
+                <div className="w-3 h-3 rounded-full mt-1.5 flex-shrink-0" style={{ backgroundColor: priority.color }} />
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{task.title}</p>
+                    {task.category && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ backgroundColor: task.category.color + '25', color: task.category.color }}>
+                        {task.category.icon} {task.category.name}
+                      </span>
+                    )}
+                    {spawnedToday && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1" style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
+                        <Image src="/icon-check.png" alt="spawned" width={12} height={12} className="object-contain" /> Spawned today
+                      </span>
+                    )}
+                  </div>
+                  {task.description && (
+                    <p className="text-xs font-medium mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{task.description}</p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1.5">
+                    <span className="flex items-center gap-1 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                      <Clock size={11} /> {intervalDescription(task)}
+                    </span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full priority-${task.priority}`}>
+                      {task.priority}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button onClick={() => updateRecurring(task.id, { is_active: !task.is_active })}
+                    title={task.is_active ? 'Pause' : 'Resume'}
+                    style={{ color: task.is_active ? 'var(--success)' : 'var(--text-muted)' }}>
+                    {task.is_active ? <ToggleRight size={22} /> : <ToggleLeft size={22} />}
+                  </button>
+
+                  <button onClick={() => handleSpawn(task.id)} disabled={spawning === task.id || spawnedToday}
+                    title="Spawn task now"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all"
+                    style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}>
+                    {spawning === task.id ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                  </button>
+
+                  <button onClick={() => handleDelete(task.id)} disabled={deleting === task.id}
+                    title="Delete"
+                    className="w-8 h-8 rounded-lg flex items-center justify-center transition-all hover:bg-red-50 hover:text-red-400"
+                    style={{ color: 'var(--text-muted)' }}>
+                    {deleting === task.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+
+      {/* Tip */}
+      {!loading && tasks.length > 0 && (
+        <div className="rounded-2xl p-4 text-sm font-semibold flex items-start gap-3"
+          style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+          <Image src="/icon-recurring.png" alt="tip" width={20} height={20} className="object-contain flex-shrink-0 mt-0.5" />
+          <span>Hit the <strong>â–¶ play button</strong> to instantly spawn a task into your task list. Toggle the switch to pause/resume a recurring task without deleting it.</span>
+        </div>
+      )}
+
+      {showForm && (
+        <RecurringFormModal onClose={() => setShowForm(false)} onSave={createRecurring} categories={categories} />
+      )}
+    </div>
+  );
+}
+
+// FILE: app\dashboard\inbox\page.tsx
+'use client';
+
+import { useState } from 'react';
+import Image from 'next/image';
+import { ArrowRight } from 'lucide-react';
+import { useTaskStore } from '@/hooks/useTaskStore';
+import { Task } from '@/types';
+import { isOverdue, cn } from '@/utils';
+import TaskCard from '@/components/tasks/TaskCard';
+import TaskFormModal from '@/components/tasks/TaskFormModal';
+import Link from 'next/link';
+
+interface InboxSection {
+  id: string;
+  label: string;
+  icon: string;
+  description: string;
+  color: string;
+  bg: string;
+  border: string;
+  tasks: Task[];
+}
+
+export default function InboxPage() {
+  const { tasks, loading } = useTaskStore();
+  const [showForm, setShowForm] = useState(false);
+
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  const todayStr = now.toISOString().split('T')[0];
+  const tomorrowStr = new Date(now.getTime() + 86400000).toISOString().split('T')[0];
+
+  const activeTasks = tasks.filter((t) => t.status !== 'completed' && t.status !== 'archived');
+
+  const overdue = activeTasks.filter((t) => t.due_date && new Date(t.due_date) < now);
+  const dueToday = activeTasks.filter((t) => t.due_date === todayStr);
+  const urgent = activeTasks.filter(
+    (t) => t.priority === 'urgent' && t.due_date !== todayStr && !isOverdue(t.due_date, t.status)
+  );
+
+  const thisWeekEnd = new Date(now.getTime() + 7 * 86400000).toISOString().split('T')[0];
+  const highThisWeek = activeTasks.filter(
+    (t) => t.priority === 'high' && t.due_date && t.due_date > todayStr && t.due_date <= thisWeekEnd &&
+      !overdue.includes(t) && !dueToday.includes(t)
+  );
+
+  const dueTomorrow = activeTasks.filter((t) => t.due_date === tomorrowStr && !urgent.includes(t));
+
+  const noDueDateHighPriority = activeTasks.filter(
+    (t) => !t.due_date && (t.priority === 'urgent' || t.priority === 'high') && !urgent.includes(t)
+  );
+
+  const sections: InboxSection[] = [
+    { id: 'overdue', label: 'Overdue', icon: '/icon-priority.png', description: 'These are past their due date â€” tackle them first!', color: 'text-red-600', bg: 'bg-red-50', border: 'border-red-200', tasks: overdue },
+    { id: 'today', label: 'Due Today', icon: '/ic-fire.png', description: "Get these done before the day ends!", color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', tasks: dueToday },
+    { id: 'urgent', label: 'Urgent', icon: '/icon-priority.png', description: 'High-priority tasks that need your attention soon.', color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', tasks: urgent },
+    { id: 'tomorrow', label: 'Due Tomorrow', icon: '/icon-calendar.png', description: "Prepare for tomorrow â€” don't let these sneak up on you!", color: 'text-bark-600', bg: 'bg-cream-100', border: 'border-cream-300', tasks: dueTomorrow },
+    { id: 'week', label: 'This Week', icon: '/icon-calendar.png', description: 'High priority tasks due within 7 days.', color: 'text-moss-600', bg: 'bg-moss-50', border: 'border-moss-200', tasks: highThisWeek },
+    { id: 'noDue', label: 'High Priority â€” No Deadline', icon: '/float-star-orange.png', description: "Important but no due date â€” schedule these soon!", color: 'text-bark-500', bg: 'bg-cream-50', border: 'border-cream-200', tasks: noDueDateHighPriority },
+  ].filter((s) => s.tasks.length > 0);
+
+  const totalActionable = overdue.length + dueToday.length + urgent.length;
+
+  return (
+    <div className="flex flex-col gap-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-extrabold text-bark-600 flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive" }}>
+            Priority Inbox
+            <Image src="/icon-inbox.png" alt="inbox" width={28} height={28} className="object-contain" />
+          </h1>
+          <p className="text-bark-400 text-sm font-medium mt-0.5">
+            Smart view of what needs your attention right now
+          </p>
+        </div>
+        <button onClick={() => setShowForm(true)} className="btn-primary flex items-center gap-2 text-sm">
+          + Add Task
+        </button>
+      </div>
+
+      {/* Summary banner */}
+      {!loading && (
+        <div className={cn('card border-2 flex items-center gap-4', totalActionable > 0 ? 'bg-amber-50 border-amber-200' : 'bg-moss-50 border-moss-200')}>
+          <Image
+            src={totalActionable > 0 ? '/ic-fire.png' : '/float-leaf-green.png'}
+            alt="status" width={48} height={48} className="object-contain"
+          />
+          <div>
+            {totalActionable > 0 ? (
+              <>
+                <p className="font-extrabold text-bark-600" style={{ fontFamily: "'Baloo 2', cursive" }}>
+                  {totalActionable} task{totalActionable !== 1 ? 's' : ''} need immediate attention
+                </p>
+                <p className="text-sm text-bark-400 font-medium">
+                  {overdue.length > 0 && `${overdue.length} overdue Â· `}
+                  {dueToday.length > 0 && `${dueToday.length} due today Â· `}
+                  {urgent.length > 0 && `${urgent.length} urgent`}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-extrabold text-moss-600" style={{ fontFamily: "'Baloo 2', cursive" }}>
+                  You're on top of everything! ðŸŒ¿
+                </p>
+                <p className="text-sm text-bark-400 font-medium">No urgent or overdue tasks right now.</p>
+              </>
+            )}
+          </div>
+          {totalActionable > 0 && (
+            <div className="ml-auto text-right">
+              <p className="text-2xl font-extrabold text-amber-600" style={{ fontFamily: "'Baloo 2', cursive" }}>
+                {totalActionable}
+              </p>
+              <p className="text-xs text-bark-400 font-semibold">to handle</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Loading */}
+      {loading && (
+        <div className="flex flex-col gap-4">
+          {[1, 2, 3].map((i) => <div key={i} className="h-32 rounded-2xl shimmer" />)}
+        </div>
+      )}
+
+      {/* All clear */}
+      {!loading && sections.length === 0 && (
+        <div className="card text-center py-16">
+          <Image src="/float-leaf-green.png" alt="inbox zero" width={64} height={64} className="object-contain mx-auto mb-4" />
+          <h3 className="text-xl font-extrabold text-bark-500 mb-2" style={{ fontFamily: "'Baloo 2', cursive" }}>
+            Inbox Zero!
+          </h3>
+          <p className="text-bark-400 font-medium mb-5">
+            No urgent, overdue, or high-priority tasks. You're crushing it!
+          </p>
+          <Link href="/dashboard/tasks" className="btn-primary inline-flex items-center gap-2">
+            View All Tasks <ArrowRight size={16} />
+          </Link>
+        </div>
+      )}
+
+      {/* Sections */}
+      {!loading && sections.map((section) => (
+        <div key={section.id} className={`card border-2 ${section.border}`}>
+          <div className={`flex items-center gap-3 mb-4 p-3 rounded-xl ${section.bg}`}>
+            <Image src={section.icon} alt={section.label} width={28} height={28} className="object-contain" />
+            <div>
+              <h2 className={`font-extrabold ${section.color}`} style={{ fontFamily: "'Baloo 2', cursive" }}>
+                {section.label}
+                <span className="ml-2 text-sm bg-white/60 px-2 py-0.5 rounded-full">
+                  {section.tasks.length}
+                </span>
+              </h2>
+              <p className="text-xs text-bark-400 font-medium">{section.description}</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {section.tasks.map((task) => (
+              <TaskCard key={task.id} task={task} />
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {showForm && <TaskFormModal onClose={() => setShowForm(false)} />}
+    </div>
+  );
+}
+
+// FILE: app\dashboard\finance\page.tsx
+'use client';
+// app/dashboard/finance/page.tsx
+
+import { useEffect, useState } from 'react';
+import { Plus, X, Trash2, TrendingUp, TrendingDown, Wallet, Loader2 } from 'lucide-react';
+import { useFinanceStore, EXPENSE_CATEGORIES, INCOME_CATEGORIES, getCategoryMeta, TxType } from '@/hooks/useFinanceStore';
+
+function formatMoney(n: number) {
+  const sign = n < 0 ? '-' : '';
+  return `${sign}â‚±${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function AddTransactionModal({ onClose }: { onClose: () => void }) {
+  const { createTransaction } = useFinanceStore();
+  const [type, setType] = useState<TxType>('expense');
+  const [amount, setAmount] = useState('');
+  const [category, setCategory] = useState(EXPENSE_CATEGORIES[0].id);
+  const [note, setNote] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [saving, setSaving] = useState(false);
+
+  const categories = type === 'income' ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const handleTypeChange = (t: TxType) => {
+    setType(t);
+    setCategory(t === 'income' ? INCOME_CATEGORIES[0].id : EXPENSE_CATEGORIES[0].id);
+  };
+
+  const handleSubmit = async () => {
+    const amt = parseFloat(amount);
+    if (!amt || amt <= 0) return;
+    setSaving(true);
+    await createTransaction({ type, amount: amt, category, note: note.trim() || undefined, occurred_at: date });
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}>
+      <div className="w-full max-w-md rounded-2xl p-6 animate-bounce-in" style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-xl font-extrabold flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            <Wallet size={20} /> Add Transaction
+          </h2>
+          <button onClick={onClose} style={{ color: 'var(--text-muted)' }}><X size={20} /></button>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          {/* Type toggle */}
+          <div className="grid grid-cols-2 gap-2">
+            {(['expense', 'income'] as const).map((t) => (
+              <button key={t} onClick={() => handleTypeChange(t)}
+                className="py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2"
+                style={type === t
+                  ? { backgroundColor: t === 'expense' ? '#ef4444' : 'var(--success)', color: 'white' }
+                  : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+                }>
+                {t === 'expense' ? <TrendingDown size={16} /> : <TrendingUp size={16} />}
+                {t === 'expense' ? 'Expense' : 'Income'}
+              </button>
+            ))}
+          </div>
+
+          {/* Amount */}
+          <div>
+            <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Amount *</label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 font-bold" style={{ color: 'var(--text-muted)' }}>â‚±</span>
+              <input
+                type="number" inputMode="decimal" step="0.01" min="0"
+                className="input-field pl-8" placeholder="0.00"
+                value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus
+              />
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="text-sm font-bold mb-2 block" style={{ color: 'var(--text-secondary)' }}>Category</label>
+            <div className="flex gap-2 flex-wrap">
+              {categories.map((c) => (
+                <button key={c.id} onClick={() => setCategory(c.id)}
+                  className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full transition-all"
+                  style={category === c.id
+                    ? { backgroundColor: c.color, color: 'white' }
+                    : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+                  }>
+                  <span>{c.icon}</span> {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Date</label>
+            <input type="date" className="input-field" value={date} onChange={(e) => setDate(e.target.value)} max={new Date().toISOString().split('T')[0]} />
+          </div>
+
+          {/* Note */}
+          <div>
+            <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>Note <span className="font-normal" style={{ color: 'var(--text-muted)' }}>(optional)</span></label>
+            <input type="text" className="input-field" placeholder="e.g. Lunch with friends" value={note} onChange={(e) => setNote(e.target.value)} maxLength={100} />
+          </div>
+        </div>
+
+        <div className="flex gap-3 mt-6">
+          <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
+          <button onClick={handleSubmit} disabled={saving || !amount || parseFloat(amount) <= 0}
+            className="btn-primary flex-1 flex items-center justify-center gap-2 disabled:opacity-40">
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+            {saving ? 'Saving...' : 'Add'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function FinancePage() {
+  const { transactions, loading, fetchTransactions, deleteTransaction, getStats } = useFinanceStore();
+  const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => { fetchTransactions(); }, []);
+
+  const stats = getStats();
+  const maxDayTotal = Math.max(...stats.last7Days.map((d) => Math.max(d.income, d.expense)), 1);
+
+  const recent = transactions.slice(0, 10);
+
+  return (
+    <div className="flex flex-col gap-6 animate-fade-in max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            <Wallet size={28} /> Finance
+          </h1>
+          <p className="font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            Track your spending and stay on budget.
+          </p>
+        </div>
+        <button onClick={() => setShowAdd(true)} className="btn-primary flex items-center gap-2">
+          <Plus size={16} /> Add
+        </button>
+      </div>
+
+      {/* Balance card */}
+      <div className="card bg-gradient-to-br from-moss-50 to-cream-100 border-moss-200">
+        <p className="text-sm font-bold mb-1" style={{ color: 'var(--text-secondary)' }}>Total Balance</p>
+        <p className="text-4xl font-extrabold mb-4" style={{ fontFamily: "'Baloo 2', cursive", color: stats.balance < 0 ? '#ef4444' : 'var(--text-primary)' }}>
+          {formatMoney(stats.balance)}
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-xl p-3 flex items-center gap-2" style={{ backgroundColor: 'var(--success-bg)' }}>
+            <TrendingUp size={18} style={{ color: 'var(--success)' }} />
+            <div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>This month</p>
+              <p className="font-extrabold text-sm" style={{ color: 'var(--success)' }}>{formatMoney(stats.monthIncome)}</p>
+            </div>
+          </div>
+          <div className="rounded-xl p-3 flex items-center gap-2" style={{ backgroundColor: 'rgba(239,68,68,0.08)' }}>
+            <TrendingDown size={18} style={{ color: '#ef4444' }} />
+            <div>
+              <p className="text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>This month</p>
+              <p className="font-extrabold text-sm" style={{ color: '#ef4444' }}>{formatMoney(stats.monthExpense)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Last 7 days chart */}
+      <div className="card">
+        <h2 className="font-extrabold mb-4 flex items-center gap-2" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+          Last 7 Days
+        </h2>
+        <div className="flex items-end gap-3 h-32 mb-2">
+          {stats.last7Days.map((day) => (
+            <div key={day.date} className="flex-1 flex flex-col items-center gap-1">
+              <div className="w-full flex items-end gap-1 h-24">
+                <div className="flex-1 flex flex-col justify-end">
+                  <div className="w-full rounded-t-lg transition-all duration-700" style={{ height: `${(day.income / maxDayTotal) * 100}%`, minHeight: day.income > 0 ? '4px' : '0', backgroundColor: 'var(--success)' }} title={`Income: ${formatMoney(day.income)}`} />
+                </div>
+                <div className="flex-1 flex flex-col justify-end">
+                  <div className="w-full rounded-t-lg transition-all duration-700" style={{ height: `${(day.expense / maxDayTotal) * 100}%`, minHeight: day.expense > 0 ? '4px' : '0', backgroundColor: '#ef4444' }} title={`Expense: ${formatMoney(day.expense)}`} />
+                </div>
+              </div>
+              <span className="text-xs font-bold" style={{ color: 'var(--text-muted)' }}>{day.label}</span>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-4 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded inline-block" style={{ backgroundColor: 'var(--success)' }} /> Income</span>
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded inline-block" style={{ backgroundColor: '#ef4444' }} /> Expense</span>
+        </div>
+      </div>
+
+      {/* Category breakdown */}
+      {stats.categoryBreakdown.length > 0 && (
+        <div className="card">
+          <h2 className="font-extrabold mb-4" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Spending by Category â€” This Month
+          </h2>
+          <div className="flex flex-col gap-3">
+            {stats.categoryBreakdown.map((c) => {
+              const pct = stats.monthExpense > 0 ? Math.round((c.amount / stats.monthExpense) * 100) : 0;
+              return (
+                <div key={c.category}>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="flex items-center gap-2 font-bold text-sm" style={{ color: 'var(--text-primary)' }}>
+                      <span>{c.meta.icon}</span> {c.meta.label}
+                    </span>
+                    <div className="flex items-center gap-3 text-xs font-semibold" style={{ color: 'var(--text-muted)' }}>
+                      <span>{formatMoney(c.amount)}</span>
+                      <span className="font-bold" style={{ color: c.meta.color }}>{pct}%</span>
+                    </div>
+                  </div>
+                  <div className="h-2.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: c.meta.color }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Recent transactions */}
+      <div className="card">
+        <h2 className="font-extrabold mb-4" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+          Recent Transactions
+        </h2>
+        {loading ? (
+          <div className="flex flex-col gap-2">
+            {[1,2,3].map((i) => <div key={i} className="h-14 rounded-xl shimmer" />)}
+          </div>
+        ) : recent.length === 0 ? (
+          <div className="text-center py-10">
+            <Wallet size={40} className="mx-auto mb-2" style={{ color: 'var(--text-muted)' }} />
+            <p className="font-semibold" style={{ color: 'var(--text-secondary)' }}>No transactions yet</p>
+            <p className="text-sm" style={{ color: 'var(--text-muted)' }}>Add your first one above!</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {recent.map((tx) => {
+              const meta = getCategoryMeta(tx.type, tx.category);
+              return (
+                <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl group" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ backgroundColor: meta.color + '20' }}>
+                    {meta.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                      {tx.note || meta.label}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                      {meta.label} Â· {new Date(tx.occurred_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <span className="font-extrabold text-sm flex-shrink-0" style={{ fontFamily: "'Baloo 2', cursive", color: tx.type === 'income' ? 'var(--success)' : '#ef4444' }}>
+                    {tx.type === 'income' ? '+' : '-'}{formatMoney(tx.amount)}
+                  </span>
+                  <button onClick={() => deleteTransaction(tx.id)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-400 flex-shrink-0"
+                    style={{ color: 'var(--text-muted)' }}>
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {showAdd && <AddTransactionModal onClose={() => setShowAdd(false)} />}
+    </div>
+  );
+}
+
+// FILE: components\DailyChallenge.tsx
+'use client';
+// components/DailyChallenge.tsx
+
+import { useEffect, useState, useRef } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { ArrowRight, Sparkles, RefreshCw } from 'lucide-react';
+import { useChallengeStore } from '@/hooks/useChallengeStore';
+import AchievementAnimation from '@/components/AchievementAnimation';
+
+interface Props {
+  mode?: 'compact' | 'full';
+}
+
+export default function DailyChallenge({ mode = 'compact' }: Props) {
+  const { challenge, progress, completed, loading, fetchChallenge, refreshProgress } = useChallengeStore();
+  const [celebrated, setCelebrated] = useState(false);
+  const [showQuestAnim, setShowQuestAnim] = useState(false);
+  const prevCompleted = useRef(false);
+
+  useEffect(() => {
+    fetchChallenge();
+  }, []);
+
+  // Show animation only when quest transitions from incomplete â†’ complete
+  useEffect(() => {
+    if (completed && !prevCompleted.current && !celebrated) {
+      setCelebrated(true);
+      setShowQuestAnim(true);
+    }
+    prevCompleted.current = completed;
+  }, [completed]);
+
+  const progressPct = challenge ? Math.min((progress / challenge.target) * 100, 100) : 0;
+
+  if (loading) {
+    return (
+      <div className="card">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-12 h-12 rounded-xl shimmer" />
+          <div className="flex-1">
+            <div className="h-4 w-32 rounded shimmer mb-2" />
+            <div className="h-3 w-48 rounded shimmer" />
+          </div>
+        </div>
+        <div className="h-3 rounded-full shimmer" />
+      </div>
+    );
+  }
+
+  if (!challenge) return null;
+
+  // Find matching quest image from ALL_CHALLENGES if available
+  const questImageMap: Record<string, string> = {
+    'First Step':      '/quest_first_step.png',
+    'Task Trio':       '/quest_task_trio.png',
+    'Priority Slayer': '/quest_priority_slayer.png',
+    'Debt Clearer':    '/quest_debt_clearer.png',
+    'Fire Fighter':    '/quest_fire_fighter.png',
+    'High Five':       '/quest_high_five.png',
+    'Perfect Day':     '/quest_perfect_day.png',
+    'Double Threat':   '/quest_double_threat.png',
+  };
+  const questImage = questImageMap[challenge.title];
+
+  return (
+    <>
+      {/* Epic quest complete animation */}
+      {showQuestAnim && (
+        <AchievementAnimation
+          type="quest"
+          title={challenge.title}
+          subtitle={`+${challenge.xp} XP earned!`}
+          image={questImage}
+          onDismiss={() => setShowQuestAnim(false)}
+        />
+      )}
+
+      <div
+        className="card relative overflow-hidden transition-all duration-500"
+        style={completed ? { boxShadow: '0 0 0 2px var(--success)' } : {}}
+      >
+        {completed && (
+          <div
+            className="absolute inset-0 pointer-events-none rounded-2xl"
+            style={{ background: 'linear-gradient(135deg, rgba(90,163,82,0.08) 0%, rgba(90,163,82,0.04) 100%)' }}
+          />
+        )}
+
+        <div className="relative z-10">
+          <div className="flex items-start gap-4 mb-4">
+            <div className={`flex-shrink-0 transition-all duration-500 ${completed ? 'animate-float' : ''}`}>
+              <Image
+                src="/daily_challenge.png"
+                alt="Daily Challenge"
+                width={mode === 'full' ? 80 : 56}
+                height={mode === 'full' ? 80 : 56}
+                className="drop-shadow-md"
+              />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-0.5">
+                <span className="text-xs font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }}>
+                  Daily Quest
+                </span>
+                {completed && (
+                  <span className="text-xs font-extrabold px-2 py-0.5 rounded-full animate-bounce-in"
+                    style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
+                    âœ“ Done!
+                  </span>
+                )}
+              </div>
+              <h3 className="font-extrabold text-base leading-tight"
+                style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+                {challenge.emoji} {challenge.title}
+              </h3>
+              <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                {challenge.description}
+              </p>
+            </div>
+
+            <div className="flex-shrink-0 flex flex-col items-center justify-center w-12 h-12 rounded-xl font-extrabold text-center"
+              style={{ backgroundColor: completed ? 'var(--success-bg)' : 'var(--bg-secondary)', color: completed ? 'var(--success)' : 'var(--text-muted)', fontFamily: "'Baloo 2', cursive" }}>
+              <span className="text-xs leading-none">+{challenge.xp}</span>
+              <span className="text-xs leading-none">XP</span>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-bold" style={{ color: 'var(--text-secondary)' }}>Progress</span>
+              <span className="text-xs font-extrabold" style={{ color: completed ? 'var(--success)' : 'var(--text-primary)' }}>
+                {progress} / {challenge.target}
+              </span>
+            </div>
+            <div className="h-3 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--border)' }}>
+              <div className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${progressPct}%`,
+                  background: completed
+                    ? 'linear-gradient(90deg, var(--success), #82c97a)'
+                    : 'linear-gradient(90deg, var(--accent), var(--text-secondary))',
+                }} />
+            </div>
+          </div>
+
+          {completed && (
+            <div className="flex items-center gap-2 p-2.5 rounded-xl text-sm font-semibold mb-3 animate-slide-up"
+              style={{ backgroundColor: 'var(--success-bg)', color: 'var(--success)' }}>
+              <Sparkles size={15} />
+              Challenge complete! Great work today ðŸŒ¿
+            </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <button onClick={refreshProgress}
+              className="flex items-center gap-1.5 text-xs font-bold transition-colors"
+              style={{ color: 'var(--text-muted)' }}>
+              <RefreshCw size={12} /> Refresh
+            </button>
+            {mode === 'compact' && (
+              <Link href="/dashboard/challenge"
+                className="flex items-center gap-1 text-sm font-bold transition-colors"
+                style={{ color: 'var(--success)' }}>
+                View details <ArrowRight size={14} />
+              </Link>
+            )}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// FILE: components\PomodoroTimer.tsx
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
+import { Play, Pause, RotateCcw, SkipForward, Settings, X } from 'lucide-react';
+import { usePomodoroStore } from '@/hooks/usePomodoroStore';
+
+const MODE_LABELS = {
+  work: 'ðŸ… Focus Time',
+  break: 'â˜• Short Break',
+  longBreak: 'ðŸŒ¿ Long Break',
+};
+
+const MODE_COLORS = {
+  work: 'text-red-500',
+  break: 'text-amber-500',
+  longBreak: 'text-moss-500',
+};
+
+function pad(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+export default function PomodoroTimer() {
+  const {
+    mode, timeLeft, isRunning, sessionsCompleted,
+    workDuration, breakDuration,
+    start, pause, reset, skip, tick,
+    setWorkDuration, setBreakDuration,
+  } = usePomodoroStore();
+
+  const [showSettings, setShowSettings] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Tick every second
+  useEffect(() => {
+    if (isRunning) {
+      intervalRef.current = setInterval(() => tick(), 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [isRunning, tick]);
+
+  const totalSeconds = (mode === 'work' ? workDuration : mode === 'break' ? breakDuration : 15) * 60;
+  const progress = ((totalSeconds - timeLeft) / totalSeconds) * 100;
+  const minutes = Math.floor(timeLeft / 60);
+  const seconds = timeLeft % 60;
+
+  const isWork = mode === 'work';
+  const mascotSrc = isWork ? '/pomodoro_work.png' : '/pomodoro_break.png';
+
+  // Circumference of SVG circle
+  const R = 88;
+  const circumference = 2 * Math.PI * R;
+  const dashOffset = circumference * (1 - progress / 100);
+
+  return (
+    <div className="flex flex-col gap-7 animate-fade-in max-w-xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Pomodoro ðŸ…
+          </h1>
+          <p className="font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            Stay focused, take breaks, get things done.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowSettings(!showSettings)}
+          className="w-10 h-10 rounded-xl flex items-center justify-center transition-all card-lift"
+          style={{ backgroundColor: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+        >
+          <Settings size={18} />
+        </button>
+      </div>
+
+      {/* Settings panel */}
+      {showSettings && (
+        <div className="card animate-slide-up">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+              âš™ï¸ Settings
+            </h2>
+            <button onClick={() => setShowSettings(false)} style={{ color: 'var(--text-muted)' }}>
+              <X size={18} />
+            </button>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div>
+              <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                Focus duration: <span style={{ color: 'var(--text-primary)' }}>{workDuration} min</span>
+              </label>
+              <input
+                type="range" min={5} max={60} step={5}
+                value={workDuration}
+                onChange={(e) => setWorkDuration(Number(e.target.value))}
+                className="w-full accent-red-500"
+              />
+            </div>
+            <div>
+              <label className="text-sm font-bold mb-1 block" style={{ color: 'var(--text-secondary)' }}>
+                Break duration: <span style={{ color: 'var(--text-primary)' }}>{breakDuration} min</span>
+              </label>
+              <input
+                type="range" min={1} max={30} step={1}
+                value={breakDuration}
+                onChange={(e) => setBreakDuration(Number(e.target.value))}
+                className="w-full accent-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mode label */}
+      <div className="flex justify-center gap-3">
+        {(['work', 'break', 'longBreak'] as const).map((m) => (
+          <span
+            key={m}
+            className="text-xs font-bold px-3 py-1.5 rounded-full transition-all"
+            style={mode === m
+              ? { backgroundColor: 'var(--accent)', color: 'var(--accent-text)' }
+              : { backgroundColor: 'var(--bg-secondary)', color: 'var(--text-muted)' }
+            }
+          >
+            {m === 'work' ? 'ðŸ… Focus' : m === 'break' ? 'â˜• Break' : 'ðŸŒ¿ Long Break'}
+          </span>
+        ))}
+      </div>
+
+      {/* Main timer card */}
+      <div className="card flex flex-col items-center gap-6 py-10">
+
+        {/* Mascot */}
+        <div className={`transition-all duration-500 ${isRunning ? 'animate-float' : ''}`}>
+          <Image
+            src={mascotSrc}
+            alt={isWork ? 'Focus!' : 'Break time!'}
+            width={120}
+            height={120}
+            className="drop-shadow-lg"
+          />
+        </div>
+
+        {/* Mode label */}
+        <p className={`text-base font-extrabold ${MODE_COLORS[mode]}`} style={{ fontFamily: "'Baloo 2', cursive" }}>
+          {MODE_LABELS[mode]}
+        </p>
+
+        {/* Circular timer */}
+        <div className="relative flex items-center justify-center">
+          <svg width={200} height={200} className="-rotate-90">
+            {/* Track */}
+            <circle
+              cx={100} cy={100} r={R}
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth={10}
+            />
+            {/* Progress */}
+            <circle
+              cx={100} cy={100} r={R}
+              fill="none"
+              stroke={isWork ? '#ef4444' : '#f59e0b'}
+              strokeWidth={10}
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={dashOffset}
+              style={{ transition: 'stroke-dashoffset 1s linear' }}
+            />
+          </svg>
+          {/* Time display */}
+          <div className="absolute flex flex-col items-center">
+            <span
+              className="text-5xl font-extrabold tabular-nums"
+              style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}
+            >
+              {pad(minutes)}:{pad(seconds)}
+            </span>
+            <span className="text-xs font-semibold mt-1" style={{ color: 'var(--text-muted)' }}>
+              {isWork ? 'keep going!' : 'rest up ðŸ’¤'}
+            </span>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={reset}
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-all card-lift"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+          >
+            <RotateCcw size={18} />
+          </button>
+
+          <button
+            onClick={isRunning ? pause : start}
+            className="w-16 h-16 rounded-2xl flex items-center justify-center transition-all shadow-lg hover:scale-105 active:scale-95"
+            style={{ backgroundColor: isWork ? '#ef4444' : '#f59e0b', color: 'white' }}
+          >
+            {isRunning ? <Pause size={26} /> : <Play size={26} />}
+          </button>
+
+          <button
+            onClick={skip}
+            className="w-11 h-11 rounded-xl flex items-center justify-center transition-all card-lift"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+          >
+            <SkipForward size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* Sessions counter */}
+      <div className="card flex items-center justify-between">
+        <div>
+          <p className="font-extrabold" style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}>
+            Sessions Today
+          </p>
+          <p className="text-sm font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+            Each ðŸ… = one completed focus session
+          </p>
+        </div>
+        <div className="flex items-center gap-1 flex-wrap max-w-[140px] justify-end">
+          {Array.from({ length: Math.max(sessionsCompleted, 1) }).map((_, i) => (
+            <span key={i} className={`text-xl ${i < sessionsCompleted ? 'opacity-100' : 'opacity-20'}`}>ðŸ…</span>
+          ))}
+          <span
+            className="text-2xl font-extrabold ml-2"
+            style={{ fontFamily: "'Baloo 2', cursive", color: 'var(--text-primary)' }}
+          >
+            Ã—{sessionsCompleted}
+          </span>
+        </div>
+      </div>
+
+      {/* Tips */}
+      <div
+        className="rounded-2xl p-4 text-sm font-semibold"
+        style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }}
+      >
+        {isWork
+          ? 'ðŸ’¡ Close distracting tabs, put on focus music, and tackle one task at a time.'
+          : 'ðŸŒ¿ Step away from your screen, stretch, hydrate, or just breathe.'}
+      </div>
+    </div>
+  );
+}
+
+

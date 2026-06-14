@@ -1,11 +1,14 @@
+// app/api/profile/route.ts
+// Make sure these fields are in your PATCH handler's allowed updates
+
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 export async function GET() {
   const supabase = createRouteHandlerClient({ cookies });
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('profiles')
@@ -14,24 +17,50 @@ export async function GET() {
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json(data);
+  return NextResponse.json({ ...data, email: user.email });
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(req: Request) {
   const supabase = createRouteHandlerClient({ cookies });
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const body = await request.json();
-  const allowed = ['full_name', 'bio', 'username', 'is_public', 'theme', 'notification_daily_summary', 'notification_due_reminders', 'push_subscription', 'avatar_url'];
+  const body = await req.json();
+
+  // ✅ All allowed fields — including banner_preset and banner_url
+  const ALLOWED = [
+    'full_name',
+    'bio',
+    'username',
+    'is_public',
+    'theme',
+    'notification_daily_summary',
+    'notification_due_reminders',
+    'avatar_url',
+    'banner_url',
+    'banner_preset',  // ✅ NEW
+    'title',
+    'deactivated',
+  ];
+
   const updates: Record<string, unknown> = {};
-  allowed.forEach((key) => { if (body[key] !== undefined) updates[key] = body[key]; });
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key];
+  }
 
-  // Validate username
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });
+  }
+
+  // Username uniqueness check
   if (updates.username) {
-    const username = (updates.username as string).toLowerCase().replace(/[^a-z0-9_]/g, '');
-    if (username.length < 3) return NextResponse.json({ error: 'Username must be at least 3 characters' }, { status: 400 });
-    updates.username = username;
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', updates.username)
+      .neq('id', user.id)
+      .single();
+    if (existing) return NextResponse.json({ error: 'Username already taken' }, { status: 409 });
   }
 
   const { data, error } = await supabase
@@ -41,9 +70,6 @@ export async function PATCH(request: NextRequest) {
     .select()
     .single();
 
-  if (error) {
-    if (error.message.includes('unique')) return NextResponse.json({ error: 'Username already taken' }, { status: 400 });
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-  return NextResponse.json(data);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ...data, email: user.email });
 }
